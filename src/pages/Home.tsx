@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useProductStore } from '../stores/useProductStore';
 import ProductCard from '../components/products/ProductCard';
-import { useCartStore } from '../stores/useCartStore'; // We'll create this next
+import { useCartStore } from '../stores/useCartStore';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Star, Truck, Shield, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Home() {
@@ -14,45 +15,149 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  const handleAddToCart = (product: any) => {
-    addItem(product.id, 1);
-    toast.success(`${product.name} added to cart!`);
+  const handleAddToCart = async (product: any) => {
+    try {
+      await addItem(product.id, 1);
+      toast.success(`${product.name} added to cart!`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add to cart');
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  // Get only first 8 products for featured section
+  const featuredProducts = products.slice(0, 8);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
       {/* Hero Section */}
-      <div className="bg-linear-to-r from-blue-600 to-purple-600 rounded-2xl p-8 mb-12 text-white">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Wonderland Toy Store</h1>
-        <p className="text-lg mb-6">Discover magical toys that spark imagination and create joy!</p>
-        <Button className="bg-white text-blue-600 hover:bg-gray-100">
-          Shop Now
-        </Button>
-      </div>
-
-      {/* Products Grid */}
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Products</h2>
-      {products.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">No products available yet.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={handleAddToCart}
-            />
-          ))}
+      <section className="bg-linear-to-r from-blue-600 to-purple-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                Welcome to Wonderland Toy Store
+              </h1>
+              <p className="text-lg md:text-xl mb-6 opacity-90">
+                Discover magical toys that spark imagination and create joy! 
+                From action figures to board games, we have everything your child dreams of.
+              </p>
+              <div className="flex gap-4">
+                <Link to="/products">
+                  <Button className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
+                    Shop Now
+                  </Button>
+                </Link>
+                <Link to="/products">
+                  <Button variant="outline" className="border-white text-white hover:bg-white/10">
+                    View Collection
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <img
+                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXa1Ahd9CYyYJRUcYF2ROfp3eXi1NWXHlGNQ&s"
+                alt="Toys Collection"
+                className="rounded-lg shadow-xl min-h-70"
+              />
+            </div>
+          </div>
         </div>
-      )}
+      </section>
+
+      {/* Features Section */}
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
+              <Truck className="h-10 w-10 text-blue-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">Free Shipping</h3>
+                <p className="text-sm text-gray-500">On orders over Rs 5000</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
+              <Shield className="h-10 w-10 text-blue-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">Secure Payment</h3>
+                <p className="text-sm text-gray-500">100% secure transactions</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
+              <Gift className="h-10 w-10 text-blue-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">Gift Wrapping</h3>
+                <p className="text-sm text-gray-500">Free gift wrapping available</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Featured Products</h2>
+            <p className="text-gray-500">Discover our most popular toys this season</p>
+          </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center min-h-100">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : featuredProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No products available yet.</p>
+              <Link to="/admin/products" className="text-blue-600 hover:underline mt-2 inline-block">
+                Add some products as admin
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {featuredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          )}
+
+          {products.length > 8 && (
+            <div className="text-center mt-8">
+              <Link to="/products">
+                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                  View All Products →
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="py-12 bg-blue-600">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Subscribe to Our Newsletter
+          </h2>
+          <p className="text-blue-100 mb-6">
+            Get the latest updates on new products and special offers
+          </p>
+          <div className="flex max-w-md mx-auto gap-3">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="flex-1 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-white"
+            />
+            <Button className="bg-white text-blue-600 hover:bg-gray-100">
+              Subscribe
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
