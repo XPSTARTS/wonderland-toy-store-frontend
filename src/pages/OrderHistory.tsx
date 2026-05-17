@@ -70,7 +70,7 @@ export default function OrderHistory() {
                 </div>
                 
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">${order.totalAmount.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-gray-900">Rs {order.totalAmount.toFixed(2)}</p>
                   <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
                 </div>
                 

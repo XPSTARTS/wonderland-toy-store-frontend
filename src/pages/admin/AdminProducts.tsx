@@ -118,7 +118,7 @@ export default function AdminProducts() {
                 />
               </div>
               <div>
-                <Label className="text-gray-700 font-medium mb-2 block">Price ($)</Label>
+                <Label className="text-gray-700 font-medium mb-2 block">Price (Rs)</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -181,7 +181,7 @@ export default function AdminProducts() {
               <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
               <p className="text-sm text-gray-500 mb-2 line-clamp-2">{product.description}</p>
               <div className="flex justify-between items-center mb-3">
-                <span className="text-lg font-bold text-blue-600">${product.price.toFixed(2)}</span>
+                <span className="text-lg font-bold text-blue-600">Rs {product.price.toFixed(2)}</span>
                 <span className={`text-sm ${product.stockQuantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   Stock: {product.stockQuantity}
                 </span>

@@ -13,13 +13,9 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    console.log('🔑 Token from localStorage:', token ? `${token.substring(0, 50)}...` : 'No token found');
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('✅ Authorization header set:', config.headers.Authorization);
-    } else {
-      console.log('❌ No token found in localStorage');
     }
     
     return config;
@@ -29,15 +25,16 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for debugging
+// Response interceptor - remove or comment out logs
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    // Comment out or remove these lines
+    // console.log(`✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`);
     return response;
   },
   (error) => {
-    console.error(`❌ API Error: ${error.response?.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-    console.error('Error details:', error.response?.data);
+    // Comment out or remove these lines
+    // console.error(`❌ API Error: ${error.response?.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
     return Promise.reject(error);
   }
 );

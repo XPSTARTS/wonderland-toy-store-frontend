@@ -89,7 +89,7 @@ export default function Cart() {
                       </h3>
                     </Link>
                     <p className="text-blue-600 font-bold mt-1">
-                      ${item.productPrice.toFixed(2)}
+                      Rs {item.productPrice.toFixed(2)}
                     </p>
                     <div className="flex items-center gap-3 mt-2">
                       <div className="flex items-center border rounded-md">
@@ -119,7 +119,7 @@ export default function Cart() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-gray-900">
-                      ${item.subtotal.toFixed(2)}
+                      Rs {item.subtotal.toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export default function Cart() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span>Subtotal ({cart.totalItems} items)</span>
-                <span>${cart.totalAmount.toFixed(2)}</span>
+                <span>Rs {cart.totalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
@@ -158,7 +158,7 @@ export default function Cart() {
               <div className="border-t pt-4">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span className="text-blue-600">${cart.totalAmount.toFixed(2)}</span>
+                  <span className="text-blue-600">Rs {cart.totalAmount.toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>

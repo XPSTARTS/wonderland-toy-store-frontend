@@ -9,7 +9,8 @@ import {
   LayoutDashboard, 
   Box, 
   ShoppingBag,
-  Users 
+  Users,
+  Home
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -35,14 +36,12 @@ export default function Navbar() {
 
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-gray-700 hover:text-blue-600 transition">
-              Shop
+            <Link to="/" className="text-gray-700 hover:text-blue-600 transition flex items-center gap-1">
+              <Home className="h-4 w-4" />
+              Home
             </Link>
             <Link to="/" className="text-gray-700 hover:text-blue-600 transition">
-              New Arrivals
-            </Link>
-            <Link to="/" className="text-gray-700 hover:text-blue-600 transition">
-              Sale
+              All Products
             </Link>
             {isAuthenticated && (
               <Link to="/orders" className="text-gray-700 hover:text-blue-600 transition">
@@ -76,12 +75,10 @@ export default function Navbar() {
                     
                     {isAdminMenuOpen && (
                       <>
-                        {/* Backdrop */}
                         <div 
                           className="fixed inset-0 z-40"
                           onClick={() => setIsAdminMenuOpen(false)}
                         />
-                        {/* Dropdown Menu */}
                         <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-50">
                           <div className="py-1">
                             <Link

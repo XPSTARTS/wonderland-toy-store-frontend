@@ -145,7 +145,7 @@ export default function AdminDashboard() {
                     <td className="py-3 px-4">
                       {new Date(order.orderDate).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4">${order.totalAmount.toFixed(2)}</td>
+                    <td className="py-3 px-4">Rs {order.totalAmount.toFixed(2)}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium
                         ${order.status === 'Delivered' ? 'bg-green-100 text-green-800' : ''}

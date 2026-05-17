@@ -66,7 +66,7 @@ export default function AdminOrders() {
                       {new Date(order.orderDate).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 font-semibold">
-                      ${order.totalAmount.toFixed(2)}
+                      Rs {order.totalAmount.toFixed(2)}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>

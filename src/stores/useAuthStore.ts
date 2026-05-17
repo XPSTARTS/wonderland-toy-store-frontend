@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>()(
                     const response = await api.post<AuthResponse>('/auth/login', credentials);
                     const { token, email, fullName, role } = response.data;
 
-                    console.log('🔐 Login response:', { token: token?.substring(0, 50), email, fullName, role });
+                    // console.log('🔐 Login response:', { token: token?.substring(0, 50), email, fullName, role });
 
                     // Save token to localStorage
                     localStorage.setItem('token', token);

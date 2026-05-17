@@ -29,8 +29,7 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
         </Link>
         <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.description}</p>
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-2xl font-bold text-blue-600">${product.price.toFixed(2)}</span>
-          {product.stockQuantity > 0 ? (
+          <span className="text-2xl font-bold text-blue-600">Rs {product.price.toFixed(2)}</span>          {product.stockQuantity > 0 ? (
             <span className="text-xs text-green-600">In Stock</span>
           ) : (
             <span className="text-xs text-red-600">Out of Stock</span>

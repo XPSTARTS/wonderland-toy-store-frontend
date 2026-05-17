@@ -178,7 +178,7 @@ export default function Checkout() {
                       Placing Order...
                     </>
                   ) : (
-                    `Place Order • $${cart.totalAmount.toFixed(2)}`
+                    `Place Order • Rs ${cart.totalAmount.toFixed(2)}`
                   )}
                 </Button>
               </form>
