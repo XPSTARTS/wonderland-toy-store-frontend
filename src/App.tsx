@@ -9,6 +9,10 @@ import OrderConfirmation from './pages/OrderConfirmation';
 import OrderHistory from './pages/OrderHistory';
 import PrivateRoute from './components/common/PrivateRoute';
 import Navbar from './components/layout/Navbar';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminProducts from './pages/admin/AdminProducts';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminUsers from './pages/admin/AdminUsers';
 
 function App() {
   return (
@@ -18,7 +22,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
+
         {/* Protected Routes */}
         <Route element={<PrivateRoute />}>
           <Route path="/" element={<Home />} />
@@ -27,6 +31,14 @@ function App() {
           <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
           <Route path="/orders" element={<OrderHistory />} />
         </Route>
+
+        <Route element={<PrivateRoute adminOnly={true} />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+        </Route>
+
       </Routes>
       <Toaster position="top-right" />
     </Router>
