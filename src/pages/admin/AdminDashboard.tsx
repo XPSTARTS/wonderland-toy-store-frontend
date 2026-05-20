@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     },
     {
       title: 'Total Revenue',
-      value: `$${(stats?.totalRevenue || 0).toFixed(2)}`,
+      value: `Rs ${(stats?.totalRevenue || 0).toFixed(2)}`,
       icon: DollarSign,
       color: 'bg-yellow-500',
     },
