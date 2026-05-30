@@ -25,8 +25,8 @@ export default function Home() {
     }
   };
 
-  // Get only first 8 products for featured section
-  const featuredProducts = products.slice(0, 8);
+  // ✅ FIX: Safe check - ensure products exists before slice
+  const featuredProducts = products && products.length > 0 ? products.slice(0, 8) : [];
 
   return (
     <div>
@@ -122,7 +122,8 @@ export default function Home() {
             </div>
           )}
 
-          {products.length > 8 && (
+          {/* ✅ FIX: Also safe check here */}
+          {products && products.length > 8 && (
             <div className="text-center mt-8">
               <Link to="/products">
                 <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">

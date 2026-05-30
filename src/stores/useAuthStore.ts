@@ -26,7 +26,9 @@ export const useAuthStore = create<AuthState>()(
                 set({ isLoading: true });
                 try {
                     const response = await api.post<AuthResponse>('/auth/login', credentials);
-                    const { token, email, fullName, role } = response.data;
+                    // axios interceptor in src/services/api.ts already returns response.data
+                    const { token, email, fullName, role } = response as any;
+
 
                     // console.log('🔐 Login response:', { token: token?.substring(0, 50), email, fullName, role });
 
@@ -48,10 +50,19 @@ export const useAuthStore = create<AuthState>()(
 
                     console.log('✅ Auth state updated, token saved');
                 } catch (error: any) {
-                    console.error('Login error:', error.response?.data || error.message);
+                    console.error('Login error raw:', error);
+                    console.error('Login error details:', {
+                        url: error?.config?.url,
+                        method: error?.config?.method,
+                        status: error?.response?.status,
+                        responseData: error?.response?.data,
+                        message: error?.message,
+                    });
+
                     set({ isLoading: false });
-                    throw new Error(error.response?.data?.message || 'Login failed');
+                    throw new Error(error?.response?.data?.message || error?.message || 'Login failed');
                 }
+
             },
 
             register: async (userData) => {
