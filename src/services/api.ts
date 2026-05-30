@@ -1,44 +1,42 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://wonderland-backend-production.up.railway.app/api';
-
-// const API_URL = 'https://localhost:7069/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout:10000,
+  timeout: 10000,
 });
 
-// Request interceptor to add token
+// Request interceptor - adds token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor - remove or comment out logs
+// Response interceptor - returns ONLY the data
 api.interceptors.response.use(
-  (response) => {
-    // Comment out or remove these lines
-    // console.log(`✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`);
-    return response;
+  (response: AxiosResponse) => {
+    // Return just the data, not the whole response object
+    return response.data;
   },
   (error) => {
-    // Comment out or remove these lines
-    // console.error(`❌ API Error: ${error.response?.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-    return Promise.reject(error);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    
+    const message = error.response?.data?.message || error.message || 'An error occurred';
+    return Promise.reject(new Error(message));
   }
 );
 

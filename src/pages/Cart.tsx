@@ -79,7 +79,7 @@ export default function Cart() {
                 <div className="flex gap-4">
                   <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                     <img
-                      src={`https://placehold.co/100x100?text=${item.productName[0]}`}
+                      src={item.imageUrl || `https://placehold.co/100x100?text=${item.productName[0]}`}
                       alt={item.productName}
                       className="w-full h-full object-cover"
                     />

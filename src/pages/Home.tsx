@@ -4,7 +4,7 @@ import { useProductStore } from '../stores/useProductStore';
 import ProductCard from '../components/products/ProductCard';
 import { useCartStore } from '../stores/cartStore';
 import { Button } from '@/components/ui/button';
-import { Loader2, Star, Truck, Shield, Gift } from 'lucide-react';
+import { Loader2, Truck, Shield, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Home() {
@@ -15,12 +15,13 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  const handleAddToCart = async (product: any) => {
+  const handleAddToCart = (product: any) => {
     try {
       addItemLocally(product, 1);
       toast.success(`${product.name} added to cart!`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to add to cart');
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      toast.error(err?.message || 'Failed to add to cart');
     }
   };
 
@@ -116,11 +117,7 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {featuredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                />
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
