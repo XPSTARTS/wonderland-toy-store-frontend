@@ -77,7 +77,7 @@ export default function Cart() {
             <Card key={item.id}>
               <CardContent className="p-4">
                 <div className="flex gap-4">
-                  <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                  <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0">
                     <img
                       src={`https://placehold.co/100x100?text=${item.productName[0]}`}
                       alt={item.productName}
@@ -101,7 +101,7 @@ export default function Cart() {
                         >
                           -
                         </button>
-                        <span className="px-3 py-1 min-w-[40px] text-center">
+                        <span className="px-3 py-1 min-w-10 text-center">
                           {item.quantity}
                         </span>
                         <button
