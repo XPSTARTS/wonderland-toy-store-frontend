@@ -72,7 +72,7 @@ export default function OrderConfirmation() {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Total Amount:</span>
-            <span className="font-bold text-green-600">${order.totalAmount.toFixed(2)}</span>
+<span className="font-bold text-green-600">Rs {order.totalAmount.toFixed(2)}</span>
           </div>
         </CardContent>
       </Card>
@@ -97,7 +97,7 @@ export default function OrderConfirmation() {
                 <p className="font-medium">{item.productName}</p>
                 <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
               </div>
-              <p className="font-medium">Rs {item.subtotal.toFixed(2)}</p>
+<p className="font-medium">Rs {item.subtotal.toFixed(2)}</p>
             </div>
           ))}
         </CardContent>

@@ -1,44 +1,46 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useCartStore } from '../stores/useCartStore';
+import { useCartStore } from '../stores/cartStore';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Cart() {
-  const { cart, isLoading, fetchCart, updateItem, removeItem, clearCart } = useCartStore();
+  const {
+    items,
+    isLoading,
+    updateQuantityLocally,
+    removeItemLocally,
+    clearCartLocally,
+    getTotalItems,
+    getTotalAmount,
+  } = useCartStore();
 
-  useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const handleUpdateQuantity = async (cartItemId: number, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    try {
-      await updateItem(cartItemId, newQuantity);
-      toast.success('Cart updated');
-    } catch (error) {
-      toast.error('Failed to update cart');
-    }
+  const cart = {
+    items,
+    totalItems: getTotalItems(),
+    totalAmount: getTotalAmount(),
   };
 
-  const handleRemoveItem = async (cartItemId: number, productName: string) => {
-    try {
-      await removeItem(cartItemId);
-      toast.success(`${productName} removed from cart`);
-    } catch (error) {
-      toast.error('Failed to remove item');
-    }
+  useEffect(() => {
+    // local-first cart; nothing to fetch from backend
+  }, []);
+
+  const handleUpdateQuantity = async (productId: number, newQuantity: number) => {
+    updateQuantityLocally(productId, newQuantity);
+    toast.success('Cart updated');
+  };
+
+  const handleRemoveItem = async (productId: number, productName: string) => {
+    removeItemLocally(productId);
+    toast.success(`${productName} removed from cart`);
   };
 
   const handleClearCart = async () => {
-    try {
-      await clearCart();
-      toast.success('Cart cleared');
-    } catch (error) {
-      toast.error('Failed to clear cart');
-    }
+    clearCartLocally();
+    toast.success('Cart cleared');
   };
 
   if (isLoading) {
@@ -94,7 +96,7 @@ export default function Cart() {
                     <div className="flex items-center gap-3 mt-2">
                       <div className="flex items-center border rounded-md">
                         <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}
                           className="px-3 py-1 hover:bg-gray-100"
                         >
                           -
@@ -103,7 +105,7 @@ export default function Cart() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
                           className="px-3 py-1 hover:bg-gray-100"
                         >
                           +

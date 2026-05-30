@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCartStore } from '../stores/useCartStore';
+import { useCartStore } from '../stores/cartStore';
 import { useOrderStore } from '../stores/useOrderStore';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,7 @@ type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { cart, fetchCart } = useCartStore();
+  const { items, getTotalAmount } = useCartStore();
   const { createOrder, isLoading } = useOrderStore();
   const [error, setError] = useState<string | null>(null);
 
@@ -40,15 +41,13 @@ export default function Checkout() {
   });
 
   useEffect(() => {
-    if (!cart || cart.items.length === 0) {
-      fetchCart();
-    }
+    // local-first cart; nothing to fetch from backend
   }, []);
 
   const onSubmit = async (data: CheckoutFormData) => {
     setError(null);
     const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
-    
+
     try {
       const order = await createOrder(fullAddress);
       toast.success('Order placed successfully!');
@@ -58,7 +57,7 @@ export default function Checkout() {
     }
   };
 
-  if (!cart || cart.items.length === 0) {
+  if (!items || items.length === 0) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-16 text-center">
         <p className="text-gray-500 mb-4">Your cart is empty</p>
@@ -71,7 +70,10 @@ export default function Checkout() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <Link to="/cart" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+      <Link
+        to="/cart"
+        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
+      >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Cart
       </Link>
@@ -171,14 +173,18 @@ export default function Checkout() {
                   </Alert>
                 )}
 
-                <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Placing Order...
                     </>
                   ) : (
-                    `Place Order • Rs ${cart.totalAmount.toFixed(2)}`
+                    `Place Order • Rs ${getTotalAmount().toFixed(2)}`
                   )}
                 </Button>
               </form>
@@ -193,18 +199,18 @@ export default function Checkout() {
               <CardTitle>Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {cart.items.map((item) => (
+              {items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span>
                     {item.productName} x{item.quantity}
                   </span>
-                  <span>${item.subtotal.toFixed(2)}</span>
+                  <span>Rs {item.subtotal.toFixed(2)}</span>
                 </div>
               ))}
               <div className="border-t pt-4">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span className="text-green-600">${cart.totalAmount.toFixed(2)}</span>
+                  <span className="text-green-600">Rs {getTotalAmount().toFixed(2)}</span>
                 </div>
               </div>
             </CardContent>
@@ -214,3 +220,4 @@ export default function Checkout() {
     </div>
   );
 }
+

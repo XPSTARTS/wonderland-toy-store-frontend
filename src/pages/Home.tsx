@@ -2,14 +2,14 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useProductStore } from '../stores/useProductStore';
 import ProductCard from '../components/products/ProductCard';
-import { useCartStore } from '../stores/useCartStore';
+import { useCartStore } from '../stores/cartStore';
 import { Button } from '@/components/ui/button';
 import { Loader2, Star, Truck, Shield, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Home() {
   const { products, isLoading, fetchProducts } = useProductStore();
-  const { addItem } = useCartStore();
+  const { addItemLocally } = useCartStore();
 
   useEffect(() => {
     fetchProducts();
@@ -17,7 +17,7 @@ export default function Home() {
 
   const handleAddToCart = async (product: any) => {
     try {
-      await addItem(product.id, 1);
+      addItemLocally(product, 1);
       toast.success(`${product.name} added to cart!`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to add to cart');

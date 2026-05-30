@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProductStore } from '../stores/useProductStore';
-import { useCartStore } from '../stores/useCartStore';
+import { useCartStore } from '../stores/cartStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ShoppingCart, ArrowLeft, Minus, Plus, Package } from 'lucide-react';
@@ -12,7 +12,7 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getProductById } = useProductStore();
-  const { addItem } = useCartStore();
+  const { addItemLocally } = useCartStore();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -31,7 +31,7 @@ export default function ProductDetail() {
   const handleAddToCart = async () => {
     if (!product) return;
     try {
-      await addItem(product.id, quantity);
+      addItemLocally(product, quantity);
       toast.success(`${quantity} × ${product.name} added to cart!`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to add to cart');

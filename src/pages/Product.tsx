@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useProductStore } from '../stores/useProductStore';
-import { useCartStore } from '../stores/useCartStore';
+import { useCartStore } from '../stores/cartStore';
 import ProductCard from '../components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export default function Products() {
   const { products, isLoading, fetchProducts } = useProductStore();
-  const { addItem } = useCartStore();
+  const { addItemLocally } = useCartStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
 
@@ -19,7 +19,7 @@ export default function Products() {
 
   const handleAddToCart = async (product: any) => {
     try {
-      await addItem(product.id, 1);
+      addItemLocally(product, 1);
       toast.success(`${product.name} added to cart!`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to add to cart');
