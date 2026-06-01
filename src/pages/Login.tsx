@@ -30,7 +30,7 @@ const Login = () => {
     
     try {
       const response = await authService.login({ email, password });
-      console.log('Login successful:', response);
+      // console.log('Login successful:', response);
       
       // Sync cart after successful login
       await syncWithBackend();
@@ -40,7 +40,7 @@ const Login = () => {
       // Redirect to the page user came from (or home)
       navigate(from, { replace: true });
     } catch (error: any) {
-      console.error('Login error:', error);
+      // console.error('Login error:', error);
       toast.error(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);

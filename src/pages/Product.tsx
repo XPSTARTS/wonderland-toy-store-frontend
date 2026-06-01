@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { useProducts } from '../stores/productContext'; // Changed
+import { useProductStore } from '../stores/productStore';  // ✅ Use productStore
 import ProductFilters from '../components/products/ProductFilters';
 import { ProductsGridSkeleton } from '../components/common/SkeletonLoader';
 import ProductCard from '../components/products/ProductCard';
 
 const Products = () => {
-  const { products, isLoading, fetchProducts } = useProducts(); // Changed
+  const { products, isLoading, fetchProducts } = useProductStore();  // ✅ Use productStore
   
   useEffect(() => {
     fetchProducts();
@@ -32,7 +32,7 @@ const Products = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
+          {products.map((product: any) => (  // ✅ Add type or use any
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

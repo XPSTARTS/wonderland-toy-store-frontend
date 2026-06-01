@@ -1,28 +1,48 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useProducts } from '../stores/productContext';
+import { useEffect , useState} from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useProductStore } from '../stores/productStore';  // ✅ Use productStore
 import ProductCard from '../components/products/ProductCard';
 import { useCartStore } from '../stores/cartStore';
+import { authService } from '../services/authService';
 import { Button } from '@/components/ui/button';
 import { Loader2, Truck, Shield, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Home() {
-  // Use filteredProducts for homepage
-  const { products, isLoading, fetchProducts, error } = useProducts();
+  const navigate = useNavigate();
+  const { products, isLoading, fetchProducts, error } = useProductStore();  // ✅ Use productStore
   const { addItemLocally } = useCartStore();
+  const [isAdding, setIsAdding] = useState<number | null>(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = async (product: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const user = authService.getCurrentUser();
+    
+    if (!user) {
+      toast.error('Please login to add items to cart');
+      navigate('/login', { state: { from: { pathname: window.location.pathname } } });
+      return;
+    }
+    
+    if (product.stockQuantity === 0) {
+      toast.error('Out of stock');
+      return;
+    }
+    
+    setIsAdding(product.id);
     try {
       addItemLocally(product, 1);
       toast.success(`${product.name} added to cart!`);
-    } catch (e: unknown) {
-      const err = e as { message?: string };
-      toast.error(err?.message || 'Failed to add to cart');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add to cart');
+    } finally {
+      setIsAdding(null);
     }
   };
 
@@ -123,7 +143,30 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <div key={product.id} className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                  <Link to={`/product/${product.id}`}>
+                    <img 
+                      src={product.imageUrl || 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=300'} 
+                      alt={product.name}
+                      className="w-full h-48 object-cover rounded mb-4"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=300';
+                      }}
+                    />
+                    <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+                    <p className="text-blue-600 font-bold mt-1">Rs {product.price.toFixed(2)}</p>
+                    <p className={`text-sm mt-1 ${product.stockQuantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {product.stockQuantity > 0 ? `In Stock (${product.stockQuantity})` : 'Out of Stock'}
+                    </p>
+                  </Link>
+                  <button
+                    onClick={(e) => handleAddToCart(product, e)}
+                    disabled={isAdding === product.id || product.stockQuantity === 0}
+                    className="mt-3 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                  >
+                    {isAdding === product.id ? 'Adding...' : 'Add to Cart'}
+                  </button>
+                </div>
               ))}
             </div>
           )}

@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { ProductProvider } from './stores/productContext';
+import { ProductProvider } from './stores/productStore';  // ✅ Use productStore
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

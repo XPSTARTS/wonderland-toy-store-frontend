@@ -1,5 +1,5 @@
 import { Search, X } from 'lucide-react';
-import { useProducts } from '../../stores/productContext';  // ✅ Fixed: Capital P and C
+import { useProductStore } from '../../stores/productStore';  // ✅ Use productStore
 import { useEffect, useState } from 'react';
 
 const ProductFilters = () => {
@@ -12,13 +12,12 @@ const ProductFilters = () => {
     setSortBy, 
     resetFilters,
     isLoading,
-    products  // Add this to get products for categories
-  } = useProducts();
+    products
+  } = useProductStore();
   
   const [categories, setCategories] = useState<string[]>([]);
   const [localSearch, setLocalSearch] = useState(searchTerm);
   
-  // Extract unique categories from products
   useEffect(() => {
     if (products && products.length > 0) {
       const uniqueCategories = [...new Set(products.map((p: any) => p.category).filter((c: any) => c && c !== ''))];
