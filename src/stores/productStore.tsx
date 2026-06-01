@@ -1,7 +1,7 @@
+// stores/productStore.ts
 import { create } from 'zustand';
 import api from '../services/api';
 
-// Define the Product type
 export interface Product {
   id: number;
   name: string;
@@ -21,6 +21,10 @@ interface ProductState {
   searchTerm: string;
   selectedCategory: string;
   sortBy: string;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  pageSize: number;
   
   // Actions
   fetchProducts: () => Promise<void>;
@@ -28,6 +32,7 @@ interface ProductState {
   setSearchTerm: (term: string) => void;
   setCategory: (category: string) => void;
   setSortBy: (sort: string) => void;
+  setPage: (page: number) => void;
   resetFilters: () => void;
 }
 
@@ -39,46 +44,53 @@ export const useProductStore = create<ProductState>((set, get) => ({
   searchTerm: '',
   selectedCategory: '',
   sortBy: 'newest',
+  currentPage: 1,
+  totalPages: 1,
+  totalCount: 0,
+  pageSize: 12, // Show 12 products per page
 
   fetchProducts: async () => {
-    const { searchTerm, selectedCategory, sortBy } = get();
+    const { searchTerm, selectedCategory, sortBy, currentPage, pageSize } = get();
     
-    // console.log('📦 Store: Fetching products with filters:', { searchTerm, selectedCategory, sortBy });
+    console.log('📦 Store: Fetching products with filters:', { searchTerm, selectedCategory, sortBy, currentPage, pageSize });
     
     set({ isLoading: true, error: null });
     
     try {
       const params: any = {
-        page: 1,
-        pageSize: 100,
+        page: currentPage,
+        pageSize: pageSize,
         sortBy: sortBy
       };
       
       if (searchTerm) params.search = searchTerm;
       if (selectedCategory) params.category = selectedCategory;
       
-      // Use 'any' to bypass TypeScript issues with axios response
       const response: any = await api.get('/products', { params });
-    //   console.log('📦 Store: API response received:', response);
+      console.log('📦 Store: API response:', response);
       
-      // Extract products - handles both array and paginated response
+      // Extract products from paginated response
       let productsArray: Product[] = [];
+      let totalPagesCount = 1;
+      let totalItemsCount = 0;
       
       if (response && Array.isArray(response)) {
-        // Response is directly an array
         productsArray = response;
+        totalItemsCount = response.length;
+        totalPagesCount = Math.ceil(totalItemsCount / pageSize);
       } else if (response && response.items && Array.isArray(response.items)) {
-        // Response is paginated { items: [...] }
         productsArray = response.items;
-      } else if (response && response.data && Array.isArray(response.data)) {
-        // Response is wrapped in data property
-        productsArray = response.data;
+        totalPagesCount = response.totalPages || 1;
+        totalItemsCount = response.totalCount || 0;
       }
       
-    //   console.log('📦 Store: Extracted products count:', productsArray.length);
+      console.log('📦 Store: Extracted products count:', productsArray.length);
+      console.log('📦 Store: Total pages:', totalPagesCount);
       
       set({ 
         products: productsArray,
+        totalPages: totalPagesCount,
+        totalCount: totalItemsCount,
         isLoading: false,
         error: null
       });
@@ -104,20 +116,22 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   setSearchTerm: (term: string) => {
-    set({ searchTerm: term });
-    // Debounce to avoid too many requests
-    setTimeout(() => {
-      get().fetchProducts();
-    }, 300);
+    set({ searchTerm: term, currentPage: 1 });
+    get().fetchProducts();
   },
 
   setCategory: (category: string) => {
-    set({ selectedCategory: category });
+    set({ selectedCategory: category, currentPage: 1 });
     get().fetchProducts();
   },
 
   setSortBy: (sort: string) => {
-    set({ sortBy: sort });
+    set({ sortBy: sort, currentPage: 1 });
+    get().fetchProducts();
+  },
+
+  setPage: (page: number) => {
+    set({ currentPage: page });
     get().fetchProducts();
   },
 
@@ -125,13 +139,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set({ 
       searchTerm: '', 
       selectedCategory: '', 
-      sortBy: 'newest' 
+      sortBy: 'newest',
+      currentPage: 1 
     });
     get().fetchProducts();
   },
 }));
 
-// Export ProductProvider for main.tsx if needed
 export const ProductProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
