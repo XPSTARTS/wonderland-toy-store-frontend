@@ -23,7 +23,7 @@ export const authService = {
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
     // Use 'any' temporarily to avoid type errors
     const response: any = await api.post('/auth/login', credentials);
-    console.log('Login response:', response);
+    // console.log('Login response:', response);
     
     // Store token and user data if they exist
     if (response.token) {

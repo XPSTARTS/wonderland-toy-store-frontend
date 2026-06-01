@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useProducts } from '../stores/productContext'; // Changed import
+import { useProducts } from '../stores/productContext';
 import ProductCard from '../components/products/ProductCard';
 import { useCartStore } from '../stores/cartStore';
 import { Button } from '@/components/ui/button';
@@ -8,15 +8,13 @@ import { Loader2, Truck, Shield, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Home() {
-  // Use the new context instead of Zustand
+  // Use filteredProducts for homepage
   const { products, isLoading, fetchProducts, error } = useProducts();
   const { addItemLocally } = useCartStore();
 
-  // Debug: Log when products change
   useEffect(() => {
-    console.log('🏠 Home: products from context:', products);
-    console.log('🏠 Home: products length:', products?.length);
-  }, [products]);
+    fetchProducts();
+  }, []);
 
   const handleAddToCart = (product: any) => {
     try {
@@ -30,7 +28,6 @@ export default function Home() {
 
   const featuredProducts = products && products.length > 0 ? products.slice(0, 8) : [];
 
-  // Show error if any
   if (error) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -122,23 +119,12 @@ export default function Home() {
           ) : featuredProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500">No products available yet.</p>
-              <p className="text-sm text-gray-400 mt-2">Debug: Products count from API: {products?.length || 0}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
-            </div>
-          )}
-
-          {products && products.length > 8 && (
-            <div className="text-center mt-8">
-              <Link to="/products">
-                <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
-                  View All Products →
-                </Button>
-              </Link>
             </div>
           )}
         </div>

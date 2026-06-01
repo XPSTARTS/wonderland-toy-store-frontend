@@ -26,7 +26,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    // console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
@@ -35,7 +35,7 @@ api.interceptors.request.use(
 // Response interceptor - returns ONLY the data
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    console.log(`API Response: ${response.config.url} - Status: ${response.status}`);
+    // console.log(`API Response: ${response.config.url} - Status: ${response.status}`);
     // ✅ IMPORTANT: Return response.data directly
     return response.data;
   },

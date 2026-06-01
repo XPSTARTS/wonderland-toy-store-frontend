@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../services/api';
 
 export interface Product {
@@ -14,6 +14,7 @@ export interface Product {
 
 interface ProductContextType {
   products: Product[];
+  filteredProducts: Product[];  // Add this for frontend filtering
   isLoading: boolean;
   error: string | null;
   searchTerm: string;
@@ -30,59 +31,79 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
+  // Fetch products from API
   const fetchProducts = useCallback(async () => {
-    console.log('🔵 Context: Fetching products with filters:', { searchTerm, selectedCategory, sortBy });
     setIsLoading(true);
     setError(null);
     
     try {
-      const params: any = {
-        page: 1,
-        pageSize: 100,
-        sortBy: sortBy
-      };
+      const response: any = await api.get('/products');
       
-      if (searchTerm) params.search = searchTerm;
-      if (selectedCategory) params.category = selectedCategory;
-      
-      const response: any = await api.get('/products', { params });
-      console.log('🔵 Context: Raw API response:', response);
-      console.log('🔵 Context: Is response an array?', Array.isArray(response));
-      
-      // ✅ FIX: Handle both array response and paginated response
       let productsArray: Product[] = [];
       
       if (Array.isArray(response)) {
-        // Response is directly an array of products
         productsArray = response;
-        console.log('🔵 Context: Response is direct array, length:', productsArray.length);
       } else if (response && response.items && Array.isArray(response.items)) {
-        // Response is paginated { items: [...] }
         productsArray = response.items;
-        console.log('🔵 Context: Response has items property, length:', productsArray.length);
-      } else {
-        console.log('🔵 Context: Unknown response format:', response);
-        productsArray = [];
       }
       
-      console.log('🔵 Context: Products array length:', productsArray.length);
-      
-      setProducts(productsArray);
+      setAllProducts(productsArray);
       
     } catch (err: any) {
-      console.error('🔵 Context: Error:', err);
       setError(err.message || 'Failed to load products');
+      setAllProducts([]);
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, selectedCategory, sortBy]);
+  }, []);
+
+  // Apply filters and sorting on the frontend
+  const filteredProducts = useMemo(() => {
+    let result = [...allProducts];
+    
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(term) || 
+        (p.description && p.description.toLowerCase().includes(term))
+      );
+    }
+    
+    // Apply category filter
+    if (selectedCategory) {
+      result = result.filter(p => p.category === selectedCategory);
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'price_asc':
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case 'price_desc':
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case 'name_asc':
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'name_desc':
+        result.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case 'newest':
+      default:
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+    }
+    
+    return result;
+  }, [allProducts, searchTerm, selectedCategory, sortBy]);
 
   const getProductById = async (id: number) => {
     try {
@@ -104,14 +125,14 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSortBy('newest');
   };
 
-  // Fetch products when filters change
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm, selectedCategory, sortBy, fetchProducts]);
+  }, []);
 
   return (
     <ProductContext.Provider value={{ 
-      products, 
+      products: filteredProducts,  // Return filtered products
+      filteredProducts,
       isLoading, 
       error, 
       searchTerm,
