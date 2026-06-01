@@ -20,15 +20,17 @@ interface CheckoutFormData {
 const Checkout = () => {
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
-  const { items, getTotalAmount, syncWithBackend, isLoading: cartLoading } = useCartStore();
+  
+  // ✅ ADD clearCartLocally to destructuring
+  const { items, getTotalAmount, syncWithBackend, isLoading: cartLoading, clearCartLocally } = useCartStore();
   const { placeOrder, isLoading: orderLoading } = useOrderStore();
   const [isSyncing, setIsSyncing] = useState(false);
-  
+
   const user = authService.getCurrentUser();
   const totalAmount = getTotalAmount();
   const shipping = totalAmount > 5000 ? 0 : 500;
   const grandTotal = totalAmount + shipping;
-  
+
   // Sync cart with backend when component mounts
   useEffect(() => {
     const syncCart = async () => {
@@ -40,10 +42,10 @@ const Checkout = () => {
         setIsSyncing(false);
       }
     };
-    
+
     syncCart();
   }, []);
-  
+
   // Redirect if cart is empty
   useEffect(() => {
     if (!cartLoading && items.length === 0 && !isSyncing) {
@@ -51,14 +53,14 @@ const Checkout = () => {
       navigate('/cart');
     }
   }, [items.length, cartLoading, navigate, isSyncing]);
-  
+
   const onSubmit = async (data: CheckoutFormData) => {
     if (items.length === 0) {
       toast.error('Your cart is empty');
       navigate('/cart');
       return;
     }
-    
+
     try {
       // First, ensure cart is synced with backend
       if (!isSyncing) {
@@ -68,23 +70,25 @@ const Checkout = () => {
         toast.success('Cart synced!', { id: 'pre-order-sync' });
         setIsSyncing(false);
       }
-      
+
       // Build complete shipping address
       const shippingAddress = `${data.address}, ${data.city}, ${data.postalCode}`;
-      
+
       toast.loading('Placing your order...', { id: 'place-order' });
-      // placeOrder expects a string (shippingAddress)
       const order = await placeOrder(shippingAddress);
-      
+
+      // ✅ CLEAR CART AFTER SUCCESSFUL ORDER
+      clearCartLocally();
+
       toast.success('Order placed successfully!', { id: 'place-order' });
       navigate(`/order-confirmation/${order.id}`);
-      
+
     } catch (error: any) {
       console.error('Order failed:', error);
       toast.error(error.message || 'Failed to place order. Please try again.', { id: 'place-order' });
     }
   };
-  
+
   if (cartLoading || isSyncing) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -93,13 +97,13 @@ const Checkout = () => {
       </div>
     );
   }
-  
+
   if (items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
         <p className="text-gray-600 mb-6">Add some items before checking out</p>
-        <button 
+        <button
           onClick={() => navigate('/products')}
           className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
         >
@@ -108,18 +112,18 @@ const Checkout = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Checkout</h1>
-      
+
       <div className="grid md:grid-cols-3 gap-8">
         {/* Checkout Form */}
         <div className="md:col-span-2">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
@@ -132,11 +136,11 @@ const Checkout = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>
                   )}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                   <input
-                    {...register('email', { 
+                    {...register('email', {
                       required: 'Email is required',
                       pattern: {
                         value: /^\S+@\S+$/i,
@@ -150,7 +154,7 @@ const Checkout = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
                   )}
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
                   <input
@@ -162,7 +166,7 @@ const Checkout = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
                   )}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
                   <input
@@ -173,7 +177,7 @@ const Checkout = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.city.message}</p>
                   )}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
                   <input
@@ -184,7 +188,7 @@ const Checkout = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.postalCode.message}</p>
                   )}
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                   <input
@@ -198,7 +202,7 @@ const Checkout = () => {
                 </div>
               </div>
             </div>
-            
+
             <button
               type="submit"
               disabled={orderLoading}
@@ -208,7 +212,7 @@ const Checkout = () => {
             </button>
           </form>
         </div>
-        
+
         {/* Order Summary */}
         <div className="bg-gray-50 p-6 rounded-lg h-fit">
           <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
@@ -231,7 +235,7 @@ const Checkout = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="border-t pt-4 mt-4">
             <h3 className="font-semibold mb-2">Items in your order:</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
