@@ -36,7 +36,7 @@ export const useCartStore = create<CartStore>()(
         const currentItems = get().items;
         // Check if product already exists using productId
         const existingIndex = currentItems.findIndex(item => item.productId === product.id);
-        
+
         let newItems;
         if (existingIndex !== -1) {
           // Update existing item - merge quantities
@@ -60,7 +60,7 @@ export const useCartStore = create<CartStore>()(
           };
           newItems = [...currentItems, newItem];
         }
-        
+
         set({ items: newItems });
       },
 
@@ -69,7 +69,7 @@ export const useCartStore = create<CartStore>()(
           get().removeItemLocally(productId);
           return;
         }
-        
+
         set(state => ({
           items: state.items.map(item =>
             item.productId === productId
@@ -94,25 +94,20 @@ export const useCartStore = create<CartStore>()(
         if (!user) {
           return;
         }
-        
+
         set({ isLoading: true });
-        
+
         try {
           const localItems = get().items;
-          
+
           if (localItems.length === 0) {
             set({ isLoading: false });
             return;
           }
-          
-          // First, clear backend cart completely
-          try {
-            await cartService.clearCart();
-          } catch (error) {
-            console.error('Failed to clear backend cart:', error);
-          }
-          
-          // Then add all local items
+
+          // REMOVED: clearCart call - it was causing CORS error
+
+          // Add all local items to backend
           for (const item of localItems) {
             try {
               await cartService.addToCart({ productId: item.productId, quantity: item.quantity });
@@ -120,20 +115,20 @@ export const useCartStore = create<CartStore>()(
               console.error(`Failed to sync item ${item.productName}:`, error);
             }
           }
-          
+
           // Fetch fresh cart from backend
           const response: any = await cartService.getCart();
-          
+
           let backendItems: any[] = [];
           if (Array.isArray(response)) {
             backendItems = response;
           } else if (response && response.items && Array.isArray(response.items)) {
             backendItems = response.items;
           }
-          
-          // Use Map to ensure unique productId - THIS PREVENTS DUPLICATES
+
+          // Use Map to ensure unique productId
           const uniqueItemsMap = new Map<number, CartItem>();
-          
+
           for (const item of backendItems) {
             if (!uniqueItemsMap.has(item.productId)) {
               uniqueItemsMap.set(item.productId, {
@@ -146,16 +141,15 @@ export const useCartStore = create<CartStore>()(
                 subtotal: item.productPrice * item.quantity
               });
             } else {
-              // If duplicate found, merge quantities
               const existing = uniqueItemsMap.get(item.productId)!;
               existing.quantity += item.quantity;
               existing.subtotal = existing.productPrice * existing.quantity;
             }
           }
-          
+
           const syncedItems = Array.from(uniqueItemsMap.values());
           set({ items: syncedItems, isLoading: false });
-          
+
         } catch (error) {
           console.error('Failed to sync cart:', error);
           set({ isLoading: false });

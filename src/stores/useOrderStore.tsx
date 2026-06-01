@@ -1,51 +1,84 @@
+// stores/useOrderStore.ts
 import { create } from 'zustand';
 import api from '../services/api';
-import { Order, CreateOrderRequest } from '../types';
 
-interface OrderState {
-  orders: Order[];
-  currentOrder: Order | null;
-  isLoading: boolean;
-  createOrder: (shippingAddress: string) => Promise<Order>;
-  fetchMyOrders: () => Promise<void>;
-  fetchOrderById: (id: number) => Promise<Order | null>;
+export interface Order {
+  id: number;
+  orderDate: string;
+  totalAmount: number;
+  status: string;
+  shippingAddress: string;
+  items?: any[];
 }
 
-export const useOrderStore = create<OrderState>((set, get) => ({
+interface OrderStore {
+  orders: Order[];
+  isLoading: boolean;
+  error: string | null;
+  placeOrder: (shippingAddress: string) => Promise<Order>;
+  getUserOrders: () => Promise<void>;
+  getOrderById: (id: number) => Promise<Order | null>;  // Add this method
+  fetchOrderById: (id: number) => Promise<Order | null>; // Add this alias for compatibility
+}
+
+export const useOrderStore = create<OrderStore>((set, get) => ({
   orders: [],
-  currentOrder: null,
   isLoading: false,
+  error: null,
 
-  createOrder: async (shippingAddress: string) => {
-    set({ isLoading: true });
+  placeOrder: async (shippingAddress: string) => {
+    set({ isLoading: true, error: null });
     try {
-      const response = await api.post('/orders', { shippingAddress });
-      const order = response.data.order;
-      set({ currentOrder: order, isLoading: false });
-      return order;
-    } catch (error: any) {
+      const response: any = await api.post('/orders', { shippingAddress });
+      console.log('Order placed:', response);
       set({ isLoading: false });
-      throw new Error(error.response?.data?.message || 'Failed to create order');
+      return response.order || response;
+    } catch (error: any) {
+      console.error('Place order error:', error);
+      set({ isLoading: false, error: error.message });
+      throw error;
     }
   },
 
-  fetchMyOrders: async () => {
-    set({ isLoading: true });
+  getUserOrders: async () => {
+    set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/orders');
-      set({ orders: response.data, isLoading: false });
+      const response: any = await api.get('/orders');
+      console.log('User orders fetched:', response);
+      
+      let ordersList = [];
+      if (Array.isArray(response)) {
+        ordersList = response;
+      } else if (response && response.items && Array.isArray(response.items)) {
+        ordersList = response.items;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        ordersList = response.data;
+      }
+      
+      set({ orders: ordersList, isLoading: false });
     } catch (error: any) {
-      console.error('Error fetching orders:', error);
-      set({ isLoading: false });
+      console.error('Fetch orders error:', error);
+      set({ orders: [], isLoading: false, error: error.message });
     }
   },
 
+  getOrderById: async (id: number) => {
+    try {
+      const response: any = await api.get(`/orders/${id}`);
+      return response;
+    } catch (error) {
+      console.error('Get order error:', error);
+      return null;
+    }
+  },
+
+  // Alias for compatibility with OrderConfirmation component
   fetchOrderById: async (id: number) => {
     try {
-      const response = await api.get(`/orders/${id}`);
-      return response.data;
+      const response: any = await api.get(`/orders/${id}`);
+      return response;
     } catch (error) {
-      console.error('Error fetching order:', error);
+      console.error('Fetch order error:', error);
       return null;
     }
   },

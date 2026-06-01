@@ -1,223 +1,252 @@
+// pages/Checkout.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useCartStore } from '../stores/cartStore';
 import { useOrderStore } from '../stores/useOrderStore';
-
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { authService } from '../services/authService';
+import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const checkoutSchema = z.object({
-  fullName: z.string().min(3, 'Full name is required'),
-  address: z.string().min(10, 'Please enter your full address'),
-  city: z.string().min(2, 'City is required'),
-  state: z.string().min(2, 'State is required'),
-  zipCode: z.string().min(5, 'Valid zip code is required'),
-  phone: z.string().min(10, 'Valid phone number is required'),
-});
+interface CheckoutFormData {
+  fullName: string;
+  email: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  phone: string;
+}
 
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
-
-export default function Checkout() {
+const Checkout = () => {
   const navigate = useNavigate();
-  const { items, getTotalAmount } = useCartStore();
-  const { createOrder, isLoading } = useOrderStore();
-  const [error, setError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutSchema),
-  });
-
+  const { register, handleSubmit, formState: { errors } } = useForm<CheckoutFormData>();
+  const { items, getTotalAmount, syncWithBackend, isLoading: cartLoading } = useCartStore();
+  const { placeOrder, isLoading: orderLoading } = useOrderStore();
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  const user = authService.getCurrentUser();
+  const totalAmount = getTotalAmount();
+  const shipping = totalAmount > 5000 ? 0 : 500;
+  const grandTotal = totalAmount + shipping;
+  
+  // Sync cart with backend when component mounts
   useEffect(() => {
-    // local-first cart; nothing to fetch from backend
+    const syncCart = async () => {
+      if (user && items.length > 0) {
+        setIsSyncing(true);
+        toast.loading('Syncing cart...', { id: 'sync-cart' });
+        await syncWithBackend();
+        toast.success('Cart synced!', { id: 'sync-cart' });
+        setIsSyncing(false);
+      }
+    };
+    
+    syncCart();
   }, []);
-
+  
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (!cartLoading && items.length === 0 && !isSyncing) {
+      toast.error('Your cart is empty');
+      navigate('/cart');
+    }
+  }, [items.length, cartLoading, navigate, isSyncing]);
+  
   const onSubmit = async (data: CheckoutFormData) => {
-    setError(null);
-    const fullAddress = `${data.address}, ${data.city}, ${data.state} ${data.zipCode}`;
-
+    if (items.length === 0) {
+      toast.error('Your cart is empty');
+      navigate('/cart');
+      return;
+    }
+    
     try {
-      const order = await createOrder(fullAddress);
-      toast.success('Order placed successfully!');
+      // First, ensure cart is synced with backend
+      if (!isSyncing) {
+        setIsSyncing(true);
+        toast.loading('Syncing cart before order...', { id: 'pre-order-sync' });
+        await syncWithBackend();
+        toast.success('Cart synced!', { id: 'pre-order-sync' });
+        setIsSyncing(false);
+      }
+      
+      // Build complete shipping address
+      const shippingAddress = `${data.address}, ${data.city}, ${data.postalCode}`;
+      
+      toast.loading('Placing your order...', { id: 'place-order' });
+      // placeOrder expects a string (shippingAddress)
+      const order = await placeOrder(shippingAddress);
+      
+      toast.success('Order placed successfully!', { id: 'place-order' });
       navigate(`/order-confirmation/${order.id}`);
-    } catch (err: any) {
-      setError(err.message);
+      
+    } catch (error: any) {
+      console.error('Order failed:', error);
+      toast.error(error.message || 'Failed to place order. Please try again.', { id: 'place-order' });
     }
   };
-
-  if (!items || items.length === 0) {
+  
+  if (cartLoading || isSyncing) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-500 mb-4">Your cart is empty</p>
-        <Link to="/">
-          <Button>Continue Shopping</Button>
-        </Link>
+      <div className="container mx-auto px-4 py-16 text-center">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-gray-600">Syncing your cart...</p>
       </div>
     );
   }
-
+  
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
+        <p className="text-gray-600 mb-6">Add some items before checking out</p>
+        <button 
+          onClick={() => navigate('/products')}
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+        >
+          Continue Shopping
+        </button>
+      </div>
+    );
+  }
+  
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <Link
-        to="/cart"
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Cart
-      </Link>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Checkout</h1>
+      
+      <div className="grid md:grid-cols-3 gap-8">
         {/* Checkout Form */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="md:col-span-2">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="John Doe"
-                    {...register('fullName')}
-                    className={errors.fullName ? 'border-red-500' : ''}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input
+                    {...register('fullName', { required: 'Full name is required' })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    defaultValue={user?.fullName || ''}
                   />
                   {errors.fullName && (
-                    <p className="text-sm text-red-500 mt-1">{errors.fullName.message}</p>
+                    <p className="text-red-500 text-sm mt-1">{errors.fullName.message}</p>
                   )}
                 </div>
-
+                
                 <div>
-                  <Label htmlFor="address">Street Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="123 Wonderland Street"
-                    {...register('address')}
-                    className={errors.address ? 'border-red-500' : ''}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    {...register('email', { 
+                      required: 'Email is required',
+                      pattern: {
+                        value: /^\S+@\S+$/i,
+                        message: 'Invalid email address'
+                      }
+                    })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    defaultValue={user?.email || ''}
+                  />
+                  {errors.email && (
+                    <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                  )}
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                  <input
+                    {...register('address', { required: 'Address is required' })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Street address"
                   />
                   {errors.address && (
-                    <p className="text-sm text-red-500 mt-1">{errors.address.message}</p>
+                    <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
                   )}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      placeholder="Fantasy City"
-                      {...register('city')}
-                      className={errors.city ? 'border-red-500' : ''}
-                    />
-                    {errors.city && (
-                      <p className="text-sm text-red-500 mt-1">{errors.city.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="state">State</Label>
-                    <Input
-                      id="state"
-                      placeholder="State"
-                      {...register('state')}
-                      className={errors.state ? 'border-red-500' : ''}
-                    />
-                    {errors.state && (
-                      <p className="text-sm text-red-500 mt-1">{errors.state.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="zipCode">Zip Code</Label>
-                    <Input
-                      id="zipCode"
-                      placeholder="12345"
-                      {...register('zipCode')}
-                      className={errors.zipCode ? 'border-red-500' : ''}
-                    />
-                    {errors.zipCode && (
-                      <p className="text-sm text-red-500 mt-1">{errors.zipCode.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      placeholder="+1 234 567 8900"
-                      {...register('phone')}
-                      className={errors.phone ? 'border-red-500' : ''}
-                    />
-                    {errors.phone && (
-                      <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    `Place Order • Rs ${getTotalAmount().toFixed(2)}`
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                  <input
+                    {...register('city', { required: 'City is required' })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {errors.city && (
+                    <p className="text-red-500 text-sm mt-1">{errors.city.message}</p>
                   )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                  <input
+                    {...register('postalCode', { required: 'Postal code is required' })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {errors.postalCode && (
+                    <p className="text-red-500 text-sm mt-1">{errors.postalCode.message}</p>
+                  )}
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                  <input
+                    {...register('phone', { required: 'Phone number is required' })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 03XXXXXXXXX"
+                  />
+                  {errors.phone && (
+                    <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={orderLoading}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {orderLoading ? 'Placing Order...' : `Place Order • Rs ${grandTotal.toFixed(2)}`}
+            </button>
+          </form>
         </div>
-
+        
         {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <div className="bg-gray-50 p-6 rounded-lg h-fit">
+          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+          <div className="space-y-2 mb-4">
+            <div className="flex justify-between">
+              <span>Subtotal ({items.length} items):</span>
+              <span>Rs {totalAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Shipping:</span>
+              <span>{shipping === 0 ? 'Free' : `Rs ${shipping.toFixed(2)}`}</span>
+            </div>
+            {shipping > 0 && (
+              <p className="text-xs text-gray-500">Add Rs {(5000 - totalAmount).toFixed(2)} more for free shipping</p>
+            )}
+            <div className="border-t pt-2 mt-2">
+              <div className="flex justify-between font-bold">
+                <span>Total:</span>
+                <span>Rs {grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t pt-4 mt-4">
+            <h3 className="font-semibold mb-2">Items in your order:</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {items.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span>
-                    {item.productName} x{item.quantity}
-                  </span>
+                <div key={item.productId} className="flex justify-between text-sm">
+                  <span>{item.productName} x{item.quantity}</span>
                   <span>Rs {item.subtotal.toFixed(2)}</span>
                 </div>
               ))}
-              <div className="border-t pt-4">
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span className="text-green-600">Rs {getTotalAmount().toFixed(2)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
+export default Checkout;
