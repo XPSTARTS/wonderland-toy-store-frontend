@@ -2,6 +2,17 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { Product } from '../types';
 
+// Define the paginated response type
+interface PaginatedResponse {
+  items: Product[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+}
+
 interface ProductState {
   products: Product[];
   isLoading: boolean;
@@ -18,17 +29,30 @@ export const useProductStore = create<ProductState>((set, get) => ({
   fetchProducts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/products');
-      set({ products: response.data, isLoading: false });
+      // api.get returns the data directly (due to interceptor)
+      // The response is of type PaginatedResponse
+      const response = await api.get('/products') as PaginatedResponse;
+      
+      console.log('Products fetched:', response); // Debug
+      
+      // Extract items from the paginated response
+      const productsList = response.items || [];
+      
+      set({ 
+        products: productsList,
+        isLoading: false 
+      });
     } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+      console.error('Failed to load products:', error);
+      set({ error: error.message, isLoading: false, products: [] });
     }
   },
 
   getProductById: async (id: number) => {
     try {
-      const response = await api.get(`/products/${id}`);
-      return response.data;
+      // api.get returns the product data directly
+      const response = await api.get(`/products/${id}`) as Product;
+      return response;
     } catch (error: any) {
       console.error('Error fetching product:', error);
       return null;

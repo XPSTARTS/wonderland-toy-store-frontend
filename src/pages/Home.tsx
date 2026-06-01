@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useProductStore } from '../stores/useProductStore';
+import { useProducts } from '../stores/productContext'; // Changed import
 import ProductCard from '../components/products/ProductCard';
 import { useCartStore } from '../stores/cartStore';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,15 @@ import { Loader2, Truck, Shield, Gift } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Home() {
-  const { products, isLoading, fetchProducts } = useProductStore();
+  // Use the new context instead of Zustand
+  const { products, isLoading, fetchProducts, error } = useProducts();
   const { addItemLocally } = useCartStore();
 
+  // Debug: Log when products change
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    console.log('🏠 Home: products from context:', products);
+    console.log('🏠 Home: products length:', products?.length);
+  }, [products]);
 
   const handleAddToCart = (product: any) => {
     try {
@@ -25,8 +28,23 @@ export default function Home() {
     }
   };
 
-  // ✅ FIX: Safe check - ensure products exists before slice
   const featuredProducts = products && products.length > 0 ? products.slice(0, 8) : [];
+
+  // Show error if any
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Products</h2>
+        <p className="text-gray-600">{error}</p>
+        <button 
+          onClick={() => fetchProducts()}
+          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -39,18 +57,12 @@ export default function Home() {
                 Welcome to Wonderland Toy Store
               </h1>
               <p className="text-lg md:text-xl mb-6 opacity-90">
-                Discover magical toys that spark imagination and create joy! 
-                From action figures to board games, we have everything your child dreams of.
+                Discover magical toys that spark imagination and create joy!
               </p>
               <div className="flex gap-4">
                 <Link to="/products">
                   <Button className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
                     Shop Now
-                  </Button>
-                </Link>
-                <Link to="/products">
-                  <Button variant="outline" className="border-white text-white hover:bg-white/10">
-                    View Collection
                   </Button>
                 </Link>
               </div>
@@ -110,9 +122,7 @@ export default function Home() {
           ) : featuredProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500">No products available yet.</p>
-              <Link to="/admin/products" className="text-blue-600 hover:underline mt-2 inline-block">
-                Add some products as admin
-              </Link>
+              <p className="text-sm text-gray-400 mt-2">Debug: Products count from API: {products?.length || 0}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -122,7 +132,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* ✅ FIX: Also safe check here */}
           {products && products.length > 8 && (
             <div className="text-center mt-8">
               <Link to="/products">

@@ -1,7 +1,6 @@
 import { Search, X } from 'lucide-react';
-import { useProductStore } from '../../stores/productStore';
+import { useProducts } from '../../stores/productContext';
 import { useEffect, useState } from 'react';
-import { productService } from '../../services/productService';
 
 const ProductFilters = () => {
   const { 
@@ -12,31 +11,21 @@ const ProductFilters = () => {
     setCategory, 
     setSortBy, 
     resetFilters,
-    isLoading 
-  } = useProductStore();
+    isLoading,
+    products  // Add this to get products for categories
+  } = useProducts();
   
   const [categories, setCategories] = useState<string[]>([]);
   const [localSearch, setLocalSearch] = useState(searchTerm);
   
-  const loadCategories = async () => {
-    try {
-      // Get unique categories from products
-      const response = await productService.getProducts({ page: 1, pageSize: 100 });
-      const uniqueCategories = [...new Set(response.items.map(p => p.category).filter(c => c))];
-      setCategories(['All', ...uniqueCategories]);
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-    }
-  };
-
+  // Extract unique categories from products
   useEffect(() => {
-    // Load categories once on mount
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadCategories();
-  }, []);
-
-
-
+    if (products && products.length > 0) {
+      const uniqueCategories = [...new Set(products.map(p => p.category).filter(c => c && c !== ''))];
+      setCategories(['All', ...uniqueCategories]);
+      console.log('Categories loaded:', uniqueCategories);
+    }
+  }, [products]);
   
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

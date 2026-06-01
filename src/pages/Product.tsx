@@ -1,25 +1,16 @@
 import { useEffect } from 'react';
-import { useProductStore } from '../stores/productStore';
+import { useProducts } from '../stores/productContext'; // Changed
 import ProductFilters from '../components/products/ProductFilters';
-import Pagination from '../components/common/Pagination';
 import { ProductsGridSkeleton } from '../components/common/SkeletonLoader';
 import ProductCard from '../components/products/ProductCard';
 
 const Products = () => {
-  const { 
-    products, 
-    isLoading, 
-    currentPage, 
-    totalPages, 
-    loadProducts, 
-    setPage 
-  } = useProductStore();
+  const { products, isLoading, fetchProducts } = useProducts(); // Changed
   
   useEffect(() => {
-    loadProducts();
-  }, []); // Load once on mount
+    fetchProducts();
+  }, []);
   
-  // Show skeleton only on initial load
   if (isLoading && products.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -40,19 +31,11 @@ const Products = () => {
           <p className="text-gray-500">No products found. Try adjusting your filters.</p>
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-          
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
       )}
     </div>
   );
