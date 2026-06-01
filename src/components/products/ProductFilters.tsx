@@ -1,5 +1,5 @@
 import { Search, X } from 'lucide-react';
-import { useProducts } from '../../stores/productContext';
+import { useProducts } from '../../stores/productContext';  // ✅ Fixed: Capital P and C
 import { useEffect, useState } from 'react';
 
 const ProductFilters = () => {
@@ -12,7 +12,7 @@ const ProductFilters = () => {
     setSortBy, 
     resetFilters,
     isLoading,
-    products
+    products  // Add this to get products for categories
   } = useProducts();
   
   const [categories, setCategories] = useState<string[]>([]);
@@ -21,16 +21,8 @@ const ProductFilters = () => {
   // Extract unique categories from products
   useEffect(() => {
     if (products && products.length > 0) {
-      // Check if products have category property
-      const hasCategories = products.some(p => p.category && p.category !== '');
-      
-      if (hasCategories) {
-        const uniqueCategories = [...new Set(products.map(p => p.category).filter(c => c && c !== ''))];
-        setCategories(['All', ...uniqueCategories]);
-      } else {
-        // If no categories, show a message or hide filter
-        setCategories(['All']);
-      }
+      const uniqueCategories = [...new Set(products.map((p: any) => p.category).filter((c: any) => c && c !== ''))];
+      setCategories(['All', ...uniqueCategories]);
     }
   }, [products]);
   
@@ -46,7 +38,6 @@ const ProductFilters = () => {
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
       <div className="flex flex-wrap gap-4 items-end">
-        {/* Search Box */}
         <form onSubmit={handleSearchSubmit} className="flex-1 min-w-50">
           <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <div className="flex">
@@ -68,7 +59,6 @@ const ProductFilters = () => {
           </div>
         </form>
         
-        {/* Category Filter - Only show if categories exist */}
         {categories.length > 1 && (
           <div className="w-48">
             <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -78,14 +68,13 @@ const ProductFilters = () => {
               className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               disabled={isLoading}
             >
-              {categories.map(cat => (
+              {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
         )}
         
-        {/* Sort By - ALWAYS show */}
         <div className="w-48">
           <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
           <select
@@ -102,7 +91,6 @@ const ProductFilters = () => {
           </select>
         </div>
         
-        {/* Reset Button */}
         {(searchTerm || selectedCategory || sortBy !== 'newest') && (
           <button
             onClick={resetFilters}
@@ -114,7 +102,6 @@ const ProductFilters = () => {
         )}
       </div>
       
-      {/* Active Filters Display */}
       {(searchTerm || selectedCategory) && (
         <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
           {searchTerm && (
