@@ -1,14 +1,23 @@
+// pages/admin/AdminDashboard.tsx
 import { useEffect } from 'react';
 import { useAdminStore } from '../../stores/useAdminStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, ShoppingBag, Users, DollarSign, TrendingUp } from 'lucide-react';
+import { Package, ShoppingBag, Users, DollarSign } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
-  const { stats, fetchStats, isLoading } = useAdminStore();
+  const { stats, fetchStats, isLoading, error } = useAdminStore();
 
   useEffect(() => {
     fetchStats();
   }, []);
+
+  // Show error if any
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   if (isLoading) {
     return (
@@ -102,11 +111,11 @@ export default function AdminDashboard() {
             <CardTitle>Low Stock Products</CardTitle>
           </CardHeader>
           <CardContent>
-            {stats?.lowStockProducts?.length === 0 ? (
+            {!stats?.lowStockProducts || stats.lowStockProducts.length === 0 ? (
               <p className="text-gray-500">All products have sufficient stock</p>
             ) : (
               <div className="space-y-3">
-                {stats?.lowStockProducts?.map((product) => (
+                {stats.lowStockProducts.map((product) => (
                   <div key={product.id} className="flex justify-between items-center">
                     <span>{product.name}</span>
                     <span className="text-red-600 font-semibold">
@@ -126,41 +135,45 @@ export default function AdminDashboard() {
           <CardTitle>Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Order ID</th>
-                  <th className="text-left py-3 px-4">Customer</th>
-                  <th className="text-left py-3 px-4">Date</th>
-                  <th className="text-left py-3 px-4">Amount</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats?.recentOrders?.map((order) => (
-                  <tr key={order.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">#{order.id}</td>
-                    <td className="py-3 px-4">{order.customerName}</td>
-                    <td className="py-3 px-4">
-                      {new Date(order.orderDate).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4">Rs {order.totalAmount.toFixed(2)}</td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium
-                        ${order.status === 'Delivered' ? 'bg-green-100 text-green-800' : ''}
-                        ${order.status === 'Shipped' ? 'bg-blue-100 text-blue-800' : ''}
-                        ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                        ${order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : ''}
-                      `}>
-                        {order.status}
-                      </span>
-                    </td>
+          {!stats?.recentOrders || stats.recentOrders.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No recent orders</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Order ID</th>
+                    <th className="text-left py-3 px-4">Customer</th>
+                    <th className="text-left py-3 px-4">Date</th>
+                    <th className="text-left py-3 px-4">Amount</th>
+                    <th className="text-left py-3 px-4">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {stats.recentOrders.map((order) => (
+                    <tr key={order.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">#{order.id}</td>
+                      <td className="py-3 px-4">{order.customerName || 'Guest'}</td>
+                      <td className="py-3 px-4">
+                        {new Date(order.orderDate).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4">Rs {order.totalAmount?.toFixed(2) || 0}</td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium
+                          ${order.status === 'Delivered' ? 'bg-green-100 text-green-800' : ''}
+                          ${order.status === 'Shipped' ? 'bg-blue-100 text-blue-800' : ''}
+                          ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                          ${order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : ''}
+                        `}>
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

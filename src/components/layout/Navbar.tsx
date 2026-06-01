@@ -2,13 +2,17 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../stores/cartStore';
 import { authService } from '../../services/authService';
-import { ShoppingCartIcon, User, LogOut, Home, Package, ShoppingBag } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ShoppingCartIcon, User, LogOut, Home, Package, ShoppingBag, Users, LayoutDashboard, ChevronDown, PlusCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 const Navbar = () => {
   const navigate = useNavigate();
+
   const totalItems = useCartStore((state) => state.getTotalItems());
   const [user, setUser] = useState(authService.getCurrentUser());
+  const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Update user state when localStorage changes
   useEffect(() => {
@@ -24,13 +28,40 @@ const Navbar = () => {
   useEffect(() => {
     setUser(authService.getCurrentUser());
   }, [window.location.pathname]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsAdminDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsAdminDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = window.setTimeout(() => {
+      setIsAdminDropdownOpen(false);
+    }, 200);
+  };
   
   const handleLogout = () => {
     authService.logout();
     setUser(null);
     navigate('/login');
-    window.location.reload(); // Force reload to clear all state
+    window.location.reload();
   };
+
+  const isAdmin = user?.role === 'Admin';
   
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
@@ -65,6 +96,72 @@ const Navbar = () => {
             {/* User Section */}
             {user ? (
               <div className="flex items-center gap-3">
+                {/* Admin Dropdown - Only show for admin users */}
+                {isAdmin && (
+                  <div 
+                    ref={dropdownRef}
+                    className="relative"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <button className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition px-3 py-1 rounded-md hover:bg-gray-50">
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Admin</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {isAdminDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border overflow-hidden z-50">
+                        <div className="py-2">
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => setIsAdminDropdownOpen(false)}
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            Dashboard
+                          </Link>
+                          <Link
+                            to="/admin/products"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => setIsAdminDropdownOpen(false)}
+                          >
+                            <Package className="w-4 h-4" />
+                            Manage Products
+                          </Link>
+                          <Link
+                            to="/admin/orders"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => setIsAdminDropdownOpen(false)}
+                          >
+                            <ShoppingBag className="w-4 h-4" />
+                            Manage Orders
+                          </Link>
+                          <Link
+                            to="/admin/users"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => setIsAdminDropdownOpen(false)}
+                          >
+                            <Users className="w-4 h-4" />
+                            Manage Users
+                          </Link>
+                          <hr className="my-1 border-gray-200" />
+                          {/* <Link
+                            to="/admin/products/new"
+                            className="block px-4 py-2 text-sm text-green-600 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => setIsAdminDropdownOpen(false)}
+                          >
+                            <PlusCircle className="w-4 h-4" />
+                            Add New Product
+                          </Link> */}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* User Info */}
                 <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
                   <User className="w-4 h-4 text-gray-600" />
                   <span className="text-sm font-medium text-gray-700">
@@ -72,12 +169,7 @@ const Navbar = () => {
                   </span>
                 </div>
                 
-                {user.role === 'Admin' && (
-                  <Link to="/admin" className="text-gray-700 hover:text-blue-600 transition text-sm">
-                    Admin
-                  </Link>
-                )}
-                
+                {/* Logout Button */}
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-1 text-red-500 hover:text-red-700 transition"
