@@ -107,9 +107,12 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
 
   updateProduct: async (productId: number, productData: any) => {
     try {
-      await api.put(`/products/${productId}`, productData);
+      // Use 'any' to bypass type issues, but don't return anything
+      const response: any = await api.put(`/products/${productId}`, productData);
+      console.log('Update response:', response);
       await get().fetchAllProducts();
     } catch (error) {
+      console.error('Update error:', error);
       throw error;
     }
   },

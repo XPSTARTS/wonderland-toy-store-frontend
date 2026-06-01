@@ -25,9 +25,22 @@ export default function AdminProducts() {
     fetchAllProducts();
   }, []);
 
+  // pages/admin/AdminProducts.tsx - Update handleSubmit
+
   const handleSubmit = async () => {
+    // Check if token exists before submitting
+    const token = localStorage.getItem('token');
+    console.log('Token before submit:', token ? 'Present' : 'Missing');
+
+    if (!token) {
+      toast.error('Please login again');
+      window.location.href = '/login';
+      return;
+    }
+
     try {
       if (editingProduct) {
+        console.log('Updating product:', editingProduct.id, formData);
         await updateProduct(editingProduct.id, formData);
         toast.success('Product updated successfully');
       } else {
@@ -36,8 +49,16 @@ export default function AdminProducts() {
       }
       setIsDialogOpen(false);
       resetForm();
-    } catch (error) {
-      toast.error('Failed to save product');
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      toast.error(error.message || 'Failed to save product');
+
+      // If unauthorized, redirect to login
+      if (error.message.includes('401') || error.message.includes('unauthorized')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
   };
 
@@ -148,14 +169,14 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="flex gap-3 pt-4">
-                <Button 
-                  onClick={handleSubmit} 
+                <Button
+                  onClick={handleSubmit}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {editingProduct ? 'Update Product' : 'Create Product'}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                   className="flex-1"
                 >
