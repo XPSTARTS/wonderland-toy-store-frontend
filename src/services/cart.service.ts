@@ -1,4 +1,4 @@
-// services/cart.service.ts
+// services/cartService.ts
 import api from './api';
 
 export const cartService = {

@@ -1,154 +1,119 @@
+// pages/Register.tsx
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores/useAuthStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { authService } from '../services/authService';
+import { useCartStore } from '../stores/cartStore';
+import toast from 'react-hot-toast';
 
-const registerSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Please confirm your password'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
-
-type RegisterFormData = z.infer<typeof registerSchema>;
-
-export default function Register() {
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const { register: registerUser, isLoading } = useAuthStore();
+const Register = () => {
   const navigate = useNavigate();
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-  });
-
-  const onSubmit = async (data: RegisterFormData) => {
-    setError(null);
-    setSuccess(null);
+  const syncWithBackend = useCartStore((state) => state.syncWithBackend);
+  
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    setIsLoading(true);
+    
     try {
-      await registerUser({
-        email: data.email,
-        password: data.password,
-        fullName: data.fullName,
-      });
-      setSuccess('Registration successful! Please login.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (err: any) {
-      setError(err.message);
+      await authService.register({ email, password, fullName });
+      toast.success('Registration successful! Please login.');
+      navigate('/login');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
-          <CardDescription className="text-center">
-            Join Wonderland Toy Store today
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {success && (
-              <Alert className="bg-green-50 border-green-500">
-                <AlertDescription className="text-green-700">{success}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Or{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              sign in to existing account
+            </Link>
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <input
                 type="text"
-                placeholder="John Doe"
-                {...register('fullName')}
-                className={errors.fullName ? 'border-red-500' : ''}
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Full Name"
               />
-              {errors.fullName && (
-                <p className="text-sm text-red-500">{errors.fullName.message}</p>
-              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
+            <div>
+              <input
                 type="email"
-                placeholder="you@example.com"
-                {...register('email')}
-                className={errors.email ? 'border-red-500' : ''}
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
               />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
+            <div>
+              <input
                 type="password"
-                placeholder="••••••"
-                {...register('password')}
-                className={errors.password ? 'border-red-500' : ''}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Password (min 6 characters)"
               />
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
+            <div>
+              <input
                 type="password"
-                placeholder="••••••"
-                {...register('confirmPassword')}
-                className={errors.confirmPassword ? 'border-red-500' : ''}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Confirm Password"
               />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
-              )}
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                'Create Account'
-              )}
-            </Button>
-            <p className="text-sm text-center text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                Sign in
-              </Link>
-            </p>
-          </CardFooter>
+          </div>
+          
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {isLoading ? 'Creating account...' : 'Sign up'}
+            </button>
+          </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
-}
+};
+
+export default Register;

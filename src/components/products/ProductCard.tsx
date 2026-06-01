@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../stores/cartStore';
-
-import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 import toast from 'react-hot-toast';
 
 interface ProductCardProps {
@@ -20,17 +19,15 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const addItemLocally = useCartStore((state) => state.addItemLocally);
   const [isAdding, setIsAdding] = useState(false);
   
-  const handleAddToCart = async (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // This app uses a local-first cart store.
-    // If you want auth enforcement, wire it to useAuthStore instead.
-    const user = null;
+    const user = authService.getCurrentUser();
     
-    if (user === null) {
+    if (!user) {
       toast.error('Please login to add items to cart');
-      navigate('/login');
+      navigate('/login', { state: { from: { pathname: window.location.pathname } } });
       return;
     }
     
@@ -41,33 +38,30 @@ const ProductCard = ({ product }: ProductCardProps) => {
     
     setIsAdding(true);
     try {
-      addItemLocally(
-        { id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl },
-        1
-      );
+      // Just add locally, don't sync
+      addItemLocally(product, 1);
       toast.success(`${product.name} added to cart!`);
-    } catch {
-      toast.error('Failed to add to cart');
+    } catch (error: any) {
+      console.error('Add to cart error:', error);
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       setIsAdding(false);
     }
-
-
   };
   
   return (
     <Link to={`/product/${product.id}`} className="block">
       <div className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200">
         <img 
-          src={product.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'} 
+          src={product.imageUrl || 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=300'} 
           alt={product.name}
           className="w-full h-48 object-cover rounded mb-4"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=No+Image';
+            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=300';
           }}
         />
         <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-        <p className="text-blue-600 font-bold mt-1">${product.price.toFixed(2)}</p>
+        <p className="text-blue-600 font-bold mt-1">Rs {product.price.toFixed(2)}</p>
         <p className={`text-sm mt-1 ${product.stockQuantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
           {product.stockQuantity > 0 ? `In Stock (${product.stockQuantity})` : 'Out of Stock'}
         </p>

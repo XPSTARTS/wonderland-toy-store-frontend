@@ -1,111 +1,116 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../stores/useAuthStore';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+// pages/Login.tsx
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { authService } from '../services/authService';
+import { useCartStore } from '../stores/cartStore';
+import toast from 'react-hot-toast';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-
-export default function Login() {
-  const [error, setError] = useState<string | null>(null);
-  const { login, isLoading } = useAuthStore();
+const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const syncWithBackend = useCartStore((state) => state.syncWithBackend);
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Get the page user was trying to visit before login
   const from = location.state?.from?.pathname || '/';
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: LoginFormData) => {
-    setError(null);
+  
+  useEffect(() => {
+    // If already logged in, redirect
+    if (authService.isAuthenticated()) {
+      navigate(from);
+    }
+  }, [navigate, from]);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
     try {
-      await login(data);
+      const response = await authService.login({ email, password });
+      console.log('Login successful:', response);
+      
+      // Sync cart after successful login
+      await syncWithBackend();
+      
+      toast.success('Login successful!');
+      
+      // Redirect to the page user came from (or home)
       navigate(from, { replace: true });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your Wonderland account
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Or{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              create a new account
+            </Link>
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <input
                 id="email"
+                name="email"
                 type="email"
-                placeholder="you@example.com"
-                {...register('email')}
-                className={errors.email ? 'border-red-500' : ''}
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
               />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
                 id="password"
+                name="password"
                 type="password"
-                placeholder="••••••"
-                {...register('password')}
-                className={errors.password ? 'border-red-500' : ''}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
               />
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-            <p className="text-sm text-center text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                Create an account
-              </Link>
-            </p>
-          </CardFooter>
+          </div>
+          
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
-}
+};
+
+export default Login;

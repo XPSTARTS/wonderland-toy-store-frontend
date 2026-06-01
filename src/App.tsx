@@ -16,8 +16,12 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminUsers from './pages/admin/AdminUsers';
+import { useEffect } from 'react';
+import { useCartStore } from './stores/cartStore';
+import { authService } from './services/authService';
 
 function App() {
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col">

@@ -1,4 +1,4 @@
-// services/authService.ts (camelCase filename)
+// services/authService.ts
 import api from './api';
 
 export interface LoginRequest {
@@ -19,13 +19,20 @@ export interface AuthResponse {
   role: string;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  fullName: string;
+  role: string;
+  createdAt: string;
+}
+
 export const authService = {
   login: async (credentials: LoginRequest): Promise<AuthResponse> => {
-    // Use 'any' temporarily to avoid type errors
     const response: any = await api.post('/auth/login', credentials);
-    // console.log('Login response:', response);
+    console.log('Login response:', response);
     
-    // Store token and user data if they exist
+    // Store token and user data
     if (response.token) {
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify({
@@ -35,13 +42,11 @@ export const authService = {
       }));
     }
     
-    return response as AuthResponse;
+    return response;
   },
 
   register: async (userData: RegisterRequest): Promise<void> => {
-    const response: any = await api.post('/auth/register', userData);
-    console.log('Register response:', response);
-    return response;
+    await api.post('/auth/register', userData);
   },
 
   logout: (): void => {
@@ -49,7 +54,7 @@ export const authService = {
     localStorage.removeItem('user');
   },
 
-  getCurrentUser: (): any => {
+  getCurrentUser: (): User | null => {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
     try {
@@ -66,5 +71,9 @@ export const authService = {
   isAdmin: (): boolean => {
     const user = authService.getCurrentUser();
     return user?.role === 'Admin';
+  },
+
+  getToken: (): string | null => {
+    return localStorage.getItem('token');
   }
 };

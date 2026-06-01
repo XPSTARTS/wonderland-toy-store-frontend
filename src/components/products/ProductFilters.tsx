@@ -47,7 +47,7 @@ const ProductFilters = () => {
     <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
       <div className="flex flex-wrap gap-4 items-end">
         {/* Search Box */}
-        <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[200px]">
+        <form onSubmit={handleSearchSubmit} className="flex-1 min-w-50">
           <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <div className="flex">
             <input
