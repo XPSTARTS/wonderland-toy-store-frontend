@@ -16,9 +16,10 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminUsers from './pages/admin/AdminUsers';
-import { useEffect } from 'react';
-import { useCartStore } from './stores/cartStore';
-import { authService } from './services/authService';
+// import { useEffect } from 'react';
+// import { useCartStore } from './stores/cartStore';
+// import { authService } from './services/authService';
+import AboutUs from './pages/AboutUs';
 
 function App() {
 
@@ -33,6 +34,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/about" element={<AboutUs />} />
             
             {/* Protected Routes - Customer */}
             <Route element={<PrivateRoute />}>
