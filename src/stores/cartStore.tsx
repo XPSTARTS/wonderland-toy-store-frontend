@@ -126,7 +126,7 @@ export const useCartStore = create<CartStore>()(
             console.error('Failed to clear backend cart:', error);
           }
 
-          // ✅ Add all local items to backend
+          // ✅ Add all local 
           for (const localItem of localItems) {
             await cartService.addToCart({ productId: localItem.productId, quantity: localItem.quantity });
             console.log(`🛒 Added item ${localItem.productName} x${localItem.quantity}`);
