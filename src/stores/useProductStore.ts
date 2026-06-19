@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import api from '../services/api';
 import { Product } from '../types';
 
-// Define the paginated response type
+// Define
 interface PaginatedResponse {
   items: Product[];
   page: number;
