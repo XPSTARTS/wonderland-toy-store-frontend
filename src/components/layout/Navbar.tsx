@@ -5,8 +5,6 @@ import { authService } from '../../services/authService';
 import { ShoppingCartIcon, User, LogOut, Home, Package, ShoppingBag, Users, LayoutDashboard, ChevronDown, Menu, X, Info } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
-const isBrowser = typeof window !== 'undefined';
-
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -16,20 +14,37 @@ const Navbar = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Keep user in sync with auth changes
+  // ✅ Listen to auth changes - runs on every render
   useEffect(() => {
-    if (!isBrowser) return;
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+  }, [window.location.pathname]); // Re-run when URL changes
 
+  // ✅ Listen to localStorage changes (for login/logout from other tabs)
+  useEffect(() => {
     const handleStorageChange = () => {
-      setUser(authService.getCurrentUser());
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
     };
-
+    
     window.addEventListener('storage', handleStorageChange);
-    setUser(authService.getCurrentUser());
-
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // ✅ Custom event for login/logout within the same tab
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+    };
+
+    // Listen to custom auth change events
+    window.addEventListener('auth-change', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+  }, []);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -59,13 +74,15 @@ const Navbar = () => {
   const handleLogout = () => {
     authService.logout();
     setUser(null);
+    // ✅ Dispatch custom event
+    window.dispatchEvent(new Event('auth-change'));
     navigate('/login');
     setIsMobileMenuOpen(false);
   };
 
   const isAdmin = user?.role === 'Admin';
   
-  // Navigation links - Now centered
+  // Navigation links - centered
   const navLinks = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/products', label: 'Products', icon: Package },
@@ -74,7 +91,7 @@ const Navbar = () => {
   
   return (
     <nav className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-50 border-b border-gray-100">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo - Left side */}
           <Link 
@@ -85,7 +102,7 @@ const Navbar = () => {
           </Link>
           
           {/* Centered Navigation Links - Desktop */}
-          <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          <div className="hidden md:flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2">
             {navLinks.map((link) => (
               <Link
                 key={link.to}

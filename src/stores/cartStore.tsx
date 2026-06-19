@@ -17,6 +17,7 @@ export interface CartItem {
 interface CartStore {
   items: CartItem[];
   isLoading: boolean;
+  isSyncing: boolean;  // ✅ Add this
   addItemLocally: (product: any, quantity: number) => void;
   updateQuantityLocally: (productId: number, quantity: number) => void;
   removeItemLocally: (productId: number) => void;
@@ -31,8 +32,11 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isLoading: false,
+      isSyncing: false,  // ✅ Add this initial state
 
       addItemLocally: (product, quantity) => {
+        console.log('➕ addItemLocally called for:', product.name, 'quantity:', quantity);
+        console.trace('🔍 Stack trace:');
         const currentItems = get().items;
         // Check if product already exists using productId
         const existingIndex = currentItems.findIndex(item => item.productId === product.id);
@@ -95,64 +99,65 @@ export const useCartStore = create<CartStore>()(
           return;
         }
 
-        set({ isLoading: true });
+        // Prevent multiple simultaneous syncs
+        if (get().isSyncing) {
+          console.log('🛒 Sync already in progress, skipping...');
+          return;
+        }
+
+        set({ isSyncing: true, isLoading: true });
 
         try {
           const localItems = get().items;
 
           if (localItems.length === 0) {
-            set({ isLoading: false });
+            set({ isSyncing: false, isLoading: false });
             return;
           }
 
-          // REMOVED: clearCart call - it was causing CORS error
+          console.log('🛒 Syncing cart with backend...');
+          console.log('🛒 Local items:', localItems.length);
 
-          // Add all local items to backend
-          for (const item of localItems) {
-            try {
-              await cartService.addToCart({ productId: item.productId, quantity: item.quantity });
-            } catch (error) {
-              console.error(`Failed to sync item ${item.productName}:`, error);
-            }
+          // ✅ Clear backend cart first
+          try {
+            await cartService.clearCart();
+            console.log('🛒 Cleared backend cart');
+          } catch (error) {
+            console.error('Failed to clear backend cart:', error);
+          }
+
+          // ✅ Add all local items to backend
+          for (const localItem of localItems) {
+            await cartService.addToCart({ productId: localItem.productId, quantity: localItem.quantity });
+            console.log(`🛒 Added item ${localItem.productName} x${localItem.quantity}`);
           }
 
           // Fetch fresh cart from backend
-          const response: any = await cartService.getCart();
-
-          let backendItems: any[] = [];
-          if (Array.isArray(response)) {
-            backendItems = response;
-          } else if (response && response.items && Array.isArray(response.items)) {
-            backendItems = response.items;
+          const freshResponse: any = await cartService.getCart();
+          let freshItems: any[] = [];
+          if (Array.isArray(freshResponse)) {
+            freshItems = freshResponse;
+          } else if (freshResponse && freshResponse.items) {
+            freshItems = freshResponse.items;
           }
 
-          // Use Map to ensure unique productId
-          const uniqueItemsMap = new Map<number, CartItem>();
+          // Update local state with backend data
+          const syncedItems = freshItems.map((item: any) => ({
+            id: item.id,
+            productId: item.productId,
+            productName: item.productName,
+            productPrice: item.productPrice,
+            quantity: item.quantity,
+            imageUrl: item.imageUrl || '',
+            subtotal: item.productPrice * item.quantity
+          }));
 
-          for (const item of backendItems) {
-            if (!uniqueItemsMap.has(item.productId)) {
-              uniqueItemsMap.set(item.productId, {
-                id: item.id,
-                productId: item.productId,
-                productName: item.productName,
-                productPrice: item.productPrice,
-                quantity: item.quantity,
-                imageUrl: item.imageUrl || '',
-                subtotal: item.productPrice * item.quantity
-              });
-            } else {
-              const existing = uniqueItemsMap.get(item.productId)!;
-              existing.quantity += item.quantity;
-              existing.subtotal = existing.productPrice * existing.quantity;
-            }
-          }
-
-          const syncedItems = Array.from(uniqueItemsMap.values());
-          set({ items: syncedItems, isLoading: false });
+          set({ items: syncedItems, isSyncing: false, isLoading: false });
+          console.log('🛒 Cart synced, total items:', syncedItems.length);
 
         } catch (error) {
           console.error('Failed to sync cart:', error);
-          set({ isLoading: false });
+          set({ isSyncing: false, isLoading: false });
         }
       },
 

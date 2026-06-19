@@ -27,17 +27,15 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
       const response = await authService.login({ email, password });
       await syncWithBackend();
+
+      // ✅ Dispatch auth change event
+      window.dispatchEvent(new Event('auth-change'));
+
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (error: any) {
