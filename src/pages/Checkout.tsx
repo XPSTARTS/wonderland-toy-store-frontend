@@ -103,15 +103,15 @@ const Checkout = () => {
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Payment successful!');
+        toast.success('Payment successful!', { id: 'payment-processing' });
         return true;
       } else {
-        toast.error(result.message || 'Payment failed');
+        toast.error(result.message || 'Payment failed', { id: 'payment-processing' });
         return false;
       }
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error('Payment processing failed');
+      toast.error('Payment processing failed', { id: 'payment-processing' });
       return false;
     } finally {
       setIsProcessingPayment(false);
@@ -145,10 +145,13 @@ const Checkout = () => {
       }
     }
 
+    // ✅ Use a single toast ID for the entire order process
+    const loadingToastId = 'order-processing';
+
     try {
       // Clear backend cart to avoid duplicates
       setIsSyncing(true);
-      toast.loading('Preparing your cart...', { id: 'sync-cart' });
+      toast.loading('Preparing your cart...', { id: loadingToastId });
       
       try {
         await cartService.clearCart();
@@ -158,41 +161,40 @@ const Checkout = () => {
       
       await syncWithBackend();
       setIsSyncing(false);
-      toast.success('Cart ready!', { id: 'sync-cart' });
 
       // Build complete shipping address
       const shippingAddress = `${data.address}, ${data.city}, ${data.postalCode}`;
 
-      // ✅ Place order
-      toast.loading('Placing your order...', { id: 'place-order' });
+      // Update toast to placing order
+      toast.loading('Placing your order...', { id: loadingToastId });
       const order = await placeOrder(shippingAddress);
 
       // ✅ For COD: Order complete, no payment needed
       if (paymentMethod === 'cod') {
-        toast.success('Order placed successfully!', { id: 'place-order' });
+        toast.success('Order placed successfully!', { id: loadingToastId });
         clearCartLocally();
-        navigate(`/order-confirmation/${order.id}`);
+        setTimeout(() => navigate(`/order-confirmation/${order.id}`), 500);
         return;
       }
 
       // ✅ For Card/Bank: Process payment after order
-      toast.loading('Processing payment...', { id: 'payment-processing' });
+      toast.loading('Processing payment...', { id: loadingToastId });
       const paymentSuccess = await processPayment(order.id);
 
       if (!paymentSuccess) {
-        toast.error('Order placed but payment failed. Please contact support.', { id: 'payment-processing' });
+        toast.error('Order placed but payment failed. Please contact support.', { id: loadingToastId });
         clearCartLocally();
-        navigate(`/order-confirmation/${order.id}`, { state: { paymentFailed: true } });
+        setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state: { paymentFailed: true } }), 500);
         return;
       }
 
-      toast.success('Payment successful!', { id: 'payment-processing' });
+      toast.success('Payment successful! Order placed!', { id: loadingToastId });
       clearCartLocally();
-      navigate(`/order-confirmation/${order.id}`);
+      setTimeout(() => navigate(`/order-confirmation/${order.id}`), 500);
 
     } catch (error: any) {
       console.error('Order failed:', error);
-      toast.error(error.message || 'Failed to place order. Please try again.', { id: 'place-order' });
+      toast.error(error.message || 'Failed to place order. Please try again.', { id: loadingToastId });
       setIsSyncing(false);
     }
   };
