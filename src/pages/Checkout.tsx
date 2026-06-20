@@ -1,10 +1,10 @@
 // pages/Checkout.tsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useCartStore } from '../stores/cartStore';
 import { useOrderStore } from '../stores/useOrderStore';
-import { cartService } from '../services/cart.service'; // ✅ Add this import
+import { cartService } from '../services/cart.service';
 import { authService } from '../services/authService';
 import { Loader2, CreditCard, Wallet, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -38,9 +38,6 @@ const Checkout = () => {
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-
-  // ✅ Use ref to track if sync has been done
-  const hasSynced = useRef(false);
 
   const { items, getTotalAmount, syncWithBackend, isLoading: cartLoading, clearCartLocally } = useCartStore();
   const { placeOrder, isLoading: orderLoading } = useOrderStore();
@@ -76,7 +73,7 @@ const Checkout = () => {
     setCardDetails({ ...cardDetails, [field]: formattedValue });
   };
 
-  // ✅ Redirect if cart is empty
+  // Redirect if cart is empty
   useEffect(() => {
     if (!cartLoading && items.length === 0 && !isSyncing) {
       toast.error('Your cart is empty');
@@ -149,18 +146,16 @@ const Checkout = () => {
     }
 
     try {
-      // ✅ Clear backend cart first to avoid duplicates
+      // Clear backend cart to avoid duplicates
       setIsSyncing(true);
       toast.loading('Preparing your cart...', { id: 'sync-cart' });
       
       try {
         await cartService.clearCart();
-        console.log('🛒 Cleared backend cart');
       } catch (error) {
-        console.error('Failed to clear backend cart:', error);
+        // Silent fail - continue with order
       }
       
-      // Then sync local items to backend
       await syncWithBackend();
       setIsSyncing(false);
       toast.success('Cart ready!', { id: 'sync-cart' });
@@ -168,25 +163,30 @@ const Checkout = () => {
       // Build complete shipping address
       const shippingAddress = `${data.address}, ${data.city}, ${data.postalCode}`;
 
+      // ✅ Place order
       toast.loading('Placing your order...', { id: 'place-order' });
       const order = await placeOrder(shippingAddress);
 
-      // Process payment
+      // ✅ For COD: Order complete, no payment needed
       if (paymentMethod === 'cod') {
-        toast.success('Order placed! You will pay on delivery.', { id: 'place-order' });
-      } else {
-        toast.loading('Processing payment...', { id: 'payment-processing' });
-        const paymentSuccess = await processPayment(order.id);
-
-        if (!paymentSuccess) {
-          toast.error('Order placed but payment failed. Please contact support.', { id: 'payment-processing' });
-          clearCartLocally();
-          navigate(`/order-confirmation/${order.id}`, { state: { paymentFailed: true } });
-          return;
-        }
-        toast.success('Payment successful!', { id: 'payment-processing' });
+        toast.success('Order placed successfully!', { id: 'place-order' });
+        clearCartLocally();
+        navigate(`/order-confirmation/${order.id}`);
+        return;
       }
 
+      // ✅ For Card/Bank: Process payment after order
+      toast.loading('Processing payment...', { id: 'payment-processing' });
+      const paymentSuccess = await processPayment(order.id);
+
+      if (!paymentSuccess) {
+        toast.error('Order placed but payment failed. Please contact support.', { id: 'payment-processing' });
+        clearCartLocally();
+        navigate(`/order-confirmation/${order.id}`, { state: { paymentFailed: true } });
+        return;
+      }
+
+      toast.success('Payment successful!', { id: 'payment-processing' });
       clearCartLocally();
       navigate(`/order-confirmation/${order.id}`);
 
