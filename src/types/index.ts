@@ -1,4 +1,6 @@
-// User Types
+// ============================================
+// AUTH TYPES
+// ============================================
 export interface User {
   id: number;
   email: string;
@@ -19,13 +21,25 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   email: string;
   fullName: string;
   role: 'Customer' | 'Admin';
+  accessTokenExpiry: string;
+  refreshTokenExpiry: string;
 }
 
-// Product Types
+// ✅ NEW: 2FA Response Type
+export interface TwoFactorResponse {
+  requiresTwoFactor: true;
+  email: string;
+  message: string;
+}
+
+// ============================================
+// PRODUCT TYPES
+// ============================================
 export interface Product {
   id: number;
   name: string;
@@ -33,6 +47,7 @@ export interface Product {
   price: number;
   stockQuantity: number;
   imageUrl: string;
+  category: string;
   createdAt: string;
 }
 
@@ -44,7 +59,27 @@ export interface CreateProductRequest {
   imageUrl: string;
 }
 
-// Cart Types
+export interface PagedResponse<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+}
+
+export interface GetProductsParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  category?: string;
+  sortBy?: string;
+}
+
+// ============================================
+// CART TYPES
+// ============================================
 export interface CartItem {
   id: number;
   productId: number;
@@ -66,7 +101,9 @@ export interface AddToCartRequest {
   quantity: number;
 }
 
-// Order Types
+// ============================================
+// ORDER TYPES
+// ============================================
 export interface OrderItem {
   id: number;
   productId: number;
@@ -91,7 +128,13 @@ export interface CreateOrderRequest {
   shippingAddress: string;
 }
 
-// Admin Types
+export interface UpdateOrderStatusRequest {
+  status: string;
+}
+
+// ============================================
+// ADMIN TYPES
+// ============================================
 export interface AdminStats {
   totalProducts: number;
   totalOrders: number;
@@ -119,40 +162,6 @@ export interface LowStockProduct {
   name: string;
   stockQuantity: number;
   price: number;
-}
-
-// User Types - Make role a union type
-export interface User {
-  id: number;
-  email: string;
-  fullName: string;
-  role: 'Customer' | 'Admin';  // Union type, not string
-  createdAt: string;
-}
-
-// Order Types - Fix status type
-export interface Order {
-  id: number;
-  orderDate: string;
-  totalAmount: number;
-  status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';  // Union type
-  shippingAddress: string;
-  items: OrderItem[];
-  customerName?: string;
-  customerEmail?: string;
-}
-
-// Add missing types
-export interface CreateProductRequest {
-  name: string;
-  description: string;
-  price: number;
-  stockQuantity: number;
-  imageUrl: string;
-}
-
-export interface UpdateOrderStatusRequest {
-  status: string;
 }
 
 export interface UpdateUserRoleRequest {

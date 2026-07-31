@@ -1,34 +1,11 @@
-// services/authService.ts
 import api from './api';
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  fullName: string;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  email: string;
-  fullName: string;
-  role: string;
-  accessTokenExpiry: string;
-  refreshTokenExpiry: string;
-}
-
-export interface User {
-  id: number;
-  email: string;
-  fullName: string;
-  role: string;
-  createdAt: string;
-}
+import { 
+  LoginRequest, 
+  RegisterRequest, 
+  AuthResponse, 
+  TwoFactorResponse, 
+  User 
+} from '../types';
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -37,9 +14,15 @@ const USER_KEY = 'user';
 
 export const authService = {
   // Login
-  login: async (credentials: LoginRequest): Promise<AuthResponse> => {
+  login: async (credentials: LoginRequest): Promise<AuthResponse | TwoFactorResponse> => {
     const response: any = await api.post('/auth/login', credentials);
     
+    // ✅ Handle 2FA response first
+    if (response.requiresTwoFactor) {
+      return response as TwoFactorResponse;
+    }
+    
+    // Normal login flow (save tokens)
     if (response.accessToken) {
       localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
       localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
@@ -50,7 +33,7 @@ export const authService = {
       }));
     }
     
-    return response;
+    return response as AuthResponse;
   },
 
   // Register
@@ -69,7 +52,7 @@ export const authService = {
       if (response.accessToken) {
         localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
         localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
-        return response;
+        return response as AuthResponse;
       }
       return null;
     } catch (error) {
@@ -78,7 +61,7 @@ export const authService = {
     }
   },
 
-  // Revoke token (logout from all devices)
+  // Revoke token
   revokeToken: async (): Promise<void> => {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (refreshToken) {
@@ -109,7 +92,7 @@ export const authService = {
     const userStr = localStorage.getItem(USER_KEY);
     if (!userStr) return null;
     try {
-      return JSON.parse(userStr);
+      return JSON.parse(userStr) as User;
     } catch {
       return null;
     }

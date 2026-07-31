@@ -11,23 +11,23 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// ✅ Request interceptor - adds token to ALL requests
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    console.log('🔑 Interceptor - Token:', token ? 'Exists' : 'Missing');
-    console.log('🔑 Interceptor - URL:', config.url);
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('✅ Token added to request headers');
-    } else {
-      console.log('❌ No token found, skipping auth header');
-    }
-    return config;
+// Response interceptor
+api.interceptors.response.use(
+  (response) => {
+    return response.data;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
+    if (error.response?.status === 401) {
+      console.log('🔴 401 Unauthorized - Token may be expired');
+      
+      // Clean up local storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      // ✅ DISPATCH EVENT INSTEAD OF HARD RELOAD
+      window.dispatchEvent(new Event('auth-change'));
+    }
     return Promise.reject(error);
   }
 );

@@ -25,15 +25,28 @@ const Login = () => {
     }
   }, [navigate, from]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
       const response = await authService.login({ email, password });
+
+      // ✅ FIX: Use a type guard to check if it's a 2FA response
+      if ('requiresTwoFactor' in response && response.requiresTwoFactor) {
+        // Save email so the 2FA page knows who to verify
+        sessionStorage.setItem('2faEmail', email);
+        
+        // Navigate to the 2FA verification page
+        navigate('/verify-2fa');
+        toast.success('Please check your email for the 2FA code.');
+        return;
+      }
+
+      // Normal login flow (no 2FA)
       await syncWithBackend();
 
-      // ✅ Dispatch auth change event
+      // Dispatch auth change event
       window.dispatchEvent(new Event('auth-change'));
 
       toast.success('Welcome back!');
