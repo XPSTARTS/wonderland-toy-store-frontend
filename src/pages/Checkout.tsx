@@ -81,7 +81,7 @@ const Checkout = () => {
     }
   }, [items.length, cartLoading, navigate, isSyncing]);
 
-  const processPayment = async (orderId: number) => {
+    const processPayment = async (orderId: number) => {
     try {
       setIsProcessingPayment(true);
 
@@ -91,11 +91,11 @@ const Checkout = () => {
         ...(paymentMethod === 'card' && { cardDetails: cardDetails })
       };
 
+      // ✅ REMOVED: Authorization header. The browser sends the cookie automatically.
       const response = await fetch(`${import.meta.env.VITE_API_URL}/payment/process/${orderId}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(paymentData)
       });
@@ -117,8 +117,8 @@ const Checkout = () => {
       setIsProcessingPayment(false);
     }
   };
-
-  const onSubmit = async (data: CheckoutFormData) => {
+  
+    const onSubmit = async (data: CheckoutFormData) => {
     if (items.length === 0) {
       toast.error('Your cart is empty');
       navigate('/cart');
@@ -145,33 +145,23 @@ const Checkout = () => {
       }
     }
 
-    // ✅ Use a single toast ID for the entire order process
     const loadingToastId = 'order-processing';
 
     try {
-      // Clear backend cart to avoid duplicates
-      setIsSyncing(true);
-      toast.loading('Preparing your cart...', { id: loadingToastId });
-      
-      try {
-        await cartService.clearCart();
-      } catch (error) {
-        // Silent fail - continue with order
-      }
-      
-      await syncWithBackend();
-      setIsSyncing(false);
+      // ✅ REMOVED: Manual cart clearing and syncing
+      // Backend handles cart clearance automatically upon successful order
 
       // Build complete shipping address
       const shippingAddress = `${data.address}, ${data.city}, ${data.postalCode}`;
 
-      // Update toast to placing order
+      // Place the order
       toast.loading('Placing your order...', { id: loadingToastId });
       const order = await placeOrder(shippingAddress);
 
       // ✅ For COD: Order complete, no payment needed
       if (paymentMethod === 'cod') {
         toast.success('Order placed successfully!', { id: loadingToastId });
+        // Let the backend clear the cart, but we clear local state for UI
         clearCartLocally();
         setTimeout(() => navigate(`/order-confirmation/${order.id}`), 500);
         return;
@@ -195,7 +185,6 @@ const Checkout = () => {
     } catch (error: any) {
       console.error('Order failed:', error);
       toast.error(error.message || 'Failed to place order. Please try again.', { id: loadingToastId });
-      setIsSyncing(false);
     }
   };
 

@@ -26,35 +26,30 @@ const Login = () => {
     }
   }, [navigate, from]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+      const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // TypeScript now perfectly understands this can be either AuthResponse OR TwoFactorResponse
       const response = await authService.login({ email, password });
+      
+      // ✅ If response is undefined, throw an error
+      if (!response) {
+        throw new Error('No response from server. Please try again.');
+      }
 
-      // ✅ CHECK FOR 2FA FIRST (Type Guard ensures we check correctly)
+      // Check if 2FA is required
       if ('requiresTwoFactor' in response && response.requiresTwoFactor) {
-        // Save email for the 2FA page
         sessionStorage.setItem('2faEmail', email);
-        
-        // Navigate to the 2FA page
         navigate('/verify-2fa');
         toast.success('Please check your email for the 2FA code.');
         return;
       }
 
-      // Normal login flow (no 2FA)
-      // Cast response to AuthResponse because TypeScript now knows it's not 2FA
-      const authData = response as AuthResponse;
-      
+      // Normal login flow
       await syncWithBackend();
-
-      // Dispatch auth change event (listened to by App.tsx)
       window.dispatchEvent(new Event('auth-change'));
-
-      toast.success(`Welcome back, ${authData.fullName || 'User'}!`);
+      toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (error: any) {
       toast.error(error.message || 'Invalid email or password');

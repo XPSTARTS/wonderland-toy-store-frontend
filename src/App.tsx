@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
@@ -18,10 +19,29 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminUsers from './pages/admin/AdminUsers';
 import Verify2FA from './pages/Verify2FA';
 import AboutUs from './pages/AboutUs';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
 
+    useEffect(() => {
+    const handleAuthChange = () => {
+      // Force a re-render of the app when auth changes
+      console.log('🔄 Auth state changed, re-rendering App');
+    };
+    window.addEventListener('auth-change', handleAuthChange);
+    
+    // Check if user is already logged in on startup
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      console.log('✅ User is already authenticated on app load');
+    }
+    
+    return () => window.removeEventListener('auth-change', handleAuthChange);
+  }, []);
+
+
   return (
+    <AuthProvider>
     <Router>
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -57,6 +77,7 @@ function App() {
         <Toaster position="top-right" />
       </div>
     </Router>
+    </AuthProvider>
   );
 }
 

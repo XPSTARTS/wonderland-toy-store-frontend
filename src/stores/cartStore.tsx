@@ -1,4 +1,3 @@
-// stores/cartStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { cartService } from '../services/cart.service';
@@ -17,7 +16,6 @@ export interface CartItem {
 interface CartStore {
   items: CartItem[];
   isLoading: boolean;
-  isSyncing: boolean;  // ✅ Add this
   addItemLocally: (product: any, quantity: number) => void;
   updateQuantityLocally: (productId: number, quantity: number) => void;
   removeItemLocally: (productId: number) => void;
@@ -32,18 +30,13 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isLoading: false,
-      isSyncing: false,  // ✅ Add this initial state
 
       addItemLocally: (product, quantity) => {
-        console.log('➕ addItemLocally called for:', product.name, 'quantity:', quantity);
-        console.trace('🔍 Stack trace:');
         const currentItems = get().items;
-        // Check if product already exists using productId
         const existingIndex = currentItems.findIndex(item => item.productId === product.id);
 
         let newItems;
         if (existingIndex !== -1) {
-          // Update existing item - merge quantities
           newItems = [...currentItems];
           const newQuantity = newItems[existingIndex].quantity + quantity;
           newItems[existingIndex] = {
@@ -52,7 +45,6 @@ export const useCartStore = create<CartStore>()(
             subtotal: newItems[existingIndex].productPrice * newQuantity
           };
         } else {
-          // Add new item
           const newItem: CartItem = {
             id: Date.now(),
             productId: product.id,
@@ -93,46 +85,14 @@ export const useCartStore = create<CartStore>()(
         set({ items: [] });
       },
 
+      // ✅ SIMPLIFIED SYNC: Just fetch from backend and overwrite local
       syncWithBackend: async () => {
         const user = authService.getCurrentUser();
-        if (!user) {
-          return;
-        }
+        if (!user) return;
 
-        // Prevent multiple simultaneous syncs
-        if (get().isSyncing) {
-          console.log('🛒 Sync already in progress, skipping...');
-          return;
-        }
-
-        set({ isSyncing: true, isLoading: true });
+        set({ isLoading: true });
 
         try {
-          const localItems = get().items;
-
-          if (localItems.length === 0) {
-            set({ isSyncing: false, isLoading: false });
-            return;
-          }
-
-          console.log('🛒 Syncing cart with backend...');
-          console.log('🛒 Local items:', localItems.length);
-
-          // ✅ Clear backend cart first
-          try {
-            await cartService.clearCart();
-            console.log('🛒 Cleared backend cart');
-          } catch (error) {
-            console.error('Failed to clear backend cart:', error);
-          }
-
-          // ✅ Add all local 
-          for (const localItem of localItems) {
-            await cartService.addToCart({ productId: localItem.productId, quantity: localItem.quantity });
-            console.log(`🛒 Added item ${localItem.productName} x${localItem.quantity}`);
-          }
-
-          // Fetch fresh cart from backend
           const freshResponse: any = await cartService.getCart();
           let freshItems: any[] = [];
           if (Array.isArray(freshResponse)) {
@@ -141,7 +101,6 @@ export const useCartStore = create<CartStore>()(
             freshItems = freshResponse.items;
           }
 
-          // Update local state with backend data
           const syncedItems = freshItems.map((item: any) => ({
             id: item.id,
             productId: item.productId,
@@ -152,12 +111,11 @@ export const useCartStore = create<CartStore>()(
             subtotal: item.productPrice * item.quantity
           }));
 
-          set({ items: syncedItems, isSyncing: false, isLoading: false });
+          set({ items: syncedItems, isLoading: false });
           console.log('🛒 Cart synced, total items:', syncedItems.length);
-
         } catch (error) {
           console.error('Failed to sync cart:', error);
-          set({ isSyncing: false, isLoading: false });
+          set({ isLoading: false });
         }
       },
 

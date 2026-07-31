@@ -15,25 +15,31 @@ const USER_KEY = 'user';
 export const authService = {
   // Login
   login: async (credentials: LoginRequest): Promise<AuthResponse | TwoFactorResponse> => {
-    const response: any = await api.post('/auth/login', credentials);
-    
-    // ✅ Handle 2FA response first
-    if (response.requiresTwoFactor) {
-      return response as TwoFactorResponse;
+    try {
+      const response: any = await api.post('/auth/login', credentials);
+      
+      // Handle 2FA
+      if (response.requiresTwoFactor) {
+        return response as TwoFactorResponse;
+      }
+      
+      // ✅ JSON body might be empty. The token is in the cookie.
+      // But we still need the user info.
+      if (response.email && response.fullName && response.role) {
+        localStorage.setItem(USER_KEY, JSON.stringify({
+          email: response.email,
+          fullName: response.fullName,
+          role: response.role
+        }));
+      }
+      
+      // ✅ Force the auth state to update
+      window.dispatchEvent(new Event('auth-change'));
+      
+      return response as AuthResponse;
+    } catch (error: any) {
+      throw error;
     }
-    
-    // Normal login flow (save tokens)
-    if (response.accessToken) {
-      localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
-      localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
-      localStorage.setItem(USER_KEY, JSON.stringify({
-        email: response.email,
-        fullName: response.fullName,
-        role: response.role
-      }));
-    }
-    
-    return response as AuthResponse;
   },
 
   // Register
@@ -129,11 +135,10 @@ export const authService = {
     return localStorage.getItem(REFRESH_TOKEN_KEY);
   },
 
-  // Check if authenticated
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem(ACCESS_TOKEN_KEY);
+    // If we have user data, assume we are logged in
+    return !!localStorage.getItem(USER_KEY);
   },
-
   // Check if admin
   isAdmin: (): boolean => {
     const user = authService.getCurrentUser();

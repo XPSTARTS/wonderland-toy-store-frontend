@@ -12,24 +12,18 @@ const api = axios.create({
 });
 
 // Response interceptor
-api.interceptors.response.use(
-  (response) => {
-    // ✅ SAFE RETURN: return the whole response, but we'll pick data in the store
-    return response; 
+api.interceptors.request.use(
+  (config) => {
+    // We do NOT need to add Authorization header manually.
+    // The browser sends the HttpOnly cookie automatically.
+    return config;
   },
   (error) => {
-    if (error.response?.status === 401) {
-      console.log('🔴 401 Unauthorized - Token may be expired');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      window.dispatchEvent(new Event('auth-change'));
-    }
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => {
     return response.data;
