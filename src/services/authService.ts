@@ -61,6 +61,27 @@ export const authService = {
     }
   },
 
+    // ✅ NEW: Verify 2FA code
+  verifyTwoFactor: async (data: { email: string; code: string }): Promise<AuthResponse> => {
+    const response: any = await api.post('/auth/2fa/verify', data);
+    
+    if (response.accessToken) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
+      localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
+      localStorage.setItem(USER_KEY, JSON.stringify({
+        email: response.email,
+        fullName: response.fullName,
+        role: response.role
+      }));
+    }
+    return response as AuthResponse;
+  },
+
+  // ✅ NEW: Resend 2FA code
+  sendTwoFactorCode: async (email: string): Promise<void> => {
+    await api.post('/auth/2fa/send', { email });
+  },
+
   // Revoke token
   revokeToken: async (): Promise<void> => {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);

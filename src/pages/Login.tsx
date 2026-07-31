@@ -1,4 +1,3 @@
-// pages/Login.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -6,6 +5,7 @@ import { useCartStore } from '../stores/cartStore';
 import { Eye, EyeOff, LogIn, Mail, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AuthLayout from '../components/auth/AuthLayout';
+import { TwoFactorResponse, AuthResponse } from '../types';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,37 +19,42 @@ const Login = () => {
 
   const from = location.state?.from?.pathname || '/';
 
+  // Redirect if already logged in
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      navigate(from);
+      navigate(from, { replace: true });
     }
   }, [navigate, from]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // TypeScript now perfectly understands this can be either AuthResponse OR TwoFactorResponse
       const response = await authService.login({ email, password });
 
-      // ✅ FIX: Use a type guard to check if it's a 2FA response
+      // ✅ CHECK FOR 2FA FIRST (Type Guard ensures we check correctly)
       if ('requiresTwoFactor' in response && response.requiresTwoFactor) {
-        // Save email so the 2FA page knows who to verify
+        // Save email for the 2FA page
         sessionStorage.setItem('2faEmail', email);
         
-        // Navigate to the 2FA verification page
+        // Navigate to the 2FA page
         navigate('/verify-2fa');
         toast.success('Please check your email for the 2FA code.');
         return;
       }
 
       // Normal login flow (no 2FA)
+      // Cast response to AuthResponse because TypeScript now knows it's not 2FA
+      const authData = response as AuthResponse;
+      
       await syncWithBackend();
 
-      // Dispatch auth change event
+      // Dispatch auth change event (listened to by App.tsx)
       window.dispatchEvent(new Event('auth-change'));
 
-      toast.success('Welcome back!');
+      toast.success(`Welcome back, ${authData.fullName || 'User'}!`);
       navigate(from, { replace: true });
     } catch (error: any) {
       toast.error(error.message || 'Invalid email or password');
@@ -107,13 +112,6 @@ const Login = () => {
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-        </div>
-
-        <div className="flex items-center">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded border-white/20 bg-white/10 checked:bg-white checked:border-white" />
-            <span className="text-sm text-white/70">Remember me</span>
-          </label>
         </div>
 
         <button

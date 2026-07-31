@@ -1,7 +1,7 @@
 // services/api.ts
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5248/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://localhost:7069/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -14,18 +14,15 @@ const api = axios.create({
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    return response.data;
+    // ✅ SAFE RETURN: return the whole response, but we'll pick data in the store
+    return response; 
   },
   (error) => {
     if (error.response?.status === 401) {
       console.log('🔴 401 Unauthorized - Token may be expired');
-      
-      // Clean up local storage
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      
-      // ✅ DISPATCH EVENT INSTEAD OF HARD RELOAD
       window.dispatchEvent(new Event('auth-change'));
     }
     return Promise.reject(error);

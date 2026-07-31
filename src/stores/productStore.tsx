@@ -25,7 +25,7 @@ interface ProductState {
   totalPages: number;
   totalCount: number;
   pageSize: number;
-  
+
   // Actions
   fetchProducts: () => Promise<void>;
   getProductById: (id: number) => Promise<Product | null>;
@@ -51,57 +51,54 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   fetchProducts: async () => {
     const { searchTerm, selectedCategory, sortBy, currentPage, pageSize } = get();
-    
-    console.log('📦 Store: Fetching products with filters:', { searchTerm, selectedCategory, sortBy, currentPage, pageSize });
-    
     set({ isLoading: true, error: null });
-    
+
     try {
-      const params: any = {
-        page: currentPage,
-        pageSize: pageSize,
-        sortBy: sortBy
-      };
-      
+      const params: any = { page: currentPage, pageSize, sortBy };
       if (searchTerm) params.search = searchTerm;
       if (selectedCategory) params.category = selectedCategory;
-      
+
+      console.log('📦 SENDING REQUEST TO:', `/products`, params);
+
       const response: any = await api.get('/products', { params });
-      console.log('📦 Store: API response:', response);
-      
-      // Extract products from paginated response
-      let productsArray: Product[] = [];
+
+      console.log('📦 FULL AXIOS RESPONSE:', response);
+      console.log('📦 RESPONSE DATA:', response?.data);
+      console.log('📦 RESPONSE KEYS:', Object.keys(response || {}));
+
+      // We try to find products in the most likely places
+      let productsArray = [];
       let totalPagesCount = 1;
       let totalItemsCount = 0;
-      
-      if (response && Array.isArray(response)) {
-        productsArray = response;
-        totalItemsCount = response.length;
-        totalPagesCount = Math.ceil(totalItemsCount / pageSize);
-      } else if (response && response.items && Array.isArray(response.items)) {
+
+      if (response?.data?.items) {
+        productsArray = response.data.items;
+        totalPagesCount = response.data.totalPages || 1;
+        totalItemsCount = response.data.totalCount || 0;
+      } else if (Array.isArray(response?.data)) {
+        productsArray = response.data;
+        totalItemsCount = productsArray.length;
+      } else if (response?.items) {
         productsArray = response.items;
         totalPagesCount = response.totalPages || 1;
         totalItemsCount = response.totalCount || 0;
+      } else {
+        console.warn('📦 No products found in response!');
       }
-      
-      console.log('📦 Store: Extracted products count:', productsArray.length);
-      console.log('📦 Store: Total pages:', totalPagesCount);
-      
-      set({ 
+
+      console.log('📦 FINAL PRODUCTS:', productsArray);
+
+      set({
         products: productsArray,
         totalPages: totalPagesCount,
         totalCount: totalItemsCount,
         isLoading: false,
         error: null
       });
-      
+
     } catch (error: any) {
-      console.error('📦 Store: Error fetching products:', error);
-      set({ 
-        error: error.message || 'Failed to load products', 
-        isLoading: false,
-        products: []
-      });
+      console.error('📦 Store Error:', error);
+      set({ error: error.message || 'Failed to load products', isLoading: false, products: [] });
     }
   },
 
@@ -136,11 +133,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   resetFilters: () => {
-    set({ 
-      searchTerm: '', 
-      selectedCategory: '', 
+    set({
+      searchTerm: '',
+      selectedCategory: '',
       sortBy: 'newest',
-      currentPage: 1 
+      currentPage: 1
     });
     get().fetchProducts();
   },
