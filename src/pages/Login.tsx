@@ -33,7 +33,6 @@ const Login = () => {
     try {
       const response = await authService.login({ email, password });
       
-      // ✅ If response is undefined, throw an error
       if (!response) {
         throw new Error('No response from server. Please try again.');
       }
@@ -46,8 +45,9 @@ const Login = () => {
         return;
       }
 
-      // Normal login flow
-      await syncWithBackend();
+      // ✅ REMOVED: await syncWithBackend(); 
+      // The cart auto-syncs when items are added.
+
       window.dispatchEvent(new Event('auth-change'));
       toast.success('Welcome back!');
       navigate(from, { replace: true });
@@ -57,7 +57,7 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
+  
   return (
     <AuthLayout
       title="Welcome Back"

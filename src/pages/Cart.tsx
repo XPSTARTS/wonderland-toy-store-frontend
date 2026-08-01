@@ -1,9 +1,9 @@
 // pages/Cart.tsx
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCartStore } from '../stores/cartStore';
 import { authService } from '../services/authService';
-import { Trash2, Plus, Minus, ShoppingBag, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Cart = () => {
@@ -13,27 +13,13 @@ const Cart = () => {
     updateQuantityLocally,
     removeItemLocally,
     clearCartLocally,
-    syncWithBackend,
     getTotalItems,
     getTotalAmount,
   } = useCartStore();
   
-  const [isSyncing, setIsSyncing] = useState(false);
   const user = authService.getCurrentUser();
   
-  // Only sync once when component mounts
-  useEffect(() => {
-    if (user && items.length === 0) {
-      syncWithBackend();
-    }
-  }, []);
-  
-  const handleSync = async () => {
-    setIsSyncing(true);
-    await syncWithBackend();
-    setIsSyncing(false);
-    toast.success('Cart synced with server');
-  };
+  // ✅ REMOVED: syncWithBackend useEffect. Auto-sync happens in addItemLocally now.
   
   const handleUpdateQuantity = (productId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -109,14 +95,7 @@ const Cart = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Shopping Cart ({totalItems} items)</h1>
-        <button
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
-        >
-          <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? 'Syncing...' : 'Sync Cart'}
-        </button>
+        {/* ✅ REMOVED: Sync Cart button entirely */}
       </div>
       
       <div className="grid md:grid-cols-3 gap-8">
