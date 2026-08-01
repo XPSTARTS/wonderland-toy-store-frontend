@@ -1,13 +1,15 @@
+// pages/admin/AdminProducts.tsx
 import { useEffect, useState } from 'react';
 import { useAdminStore } from '../../stores/useAdminStore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Pencil, Trash2, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { authService } from '../../services/authService';
 
 export default function AdminProducts() {
   const { products, fetchAllProducts, createProduct, updateProduct, deleteProduct } = useAdminStore();
@@ -25,12 +27,10 @@ export default function AdminProducts() {
     fetchAllProducts();
   }, []);
 
-  // pages/admin/AdminProducts.tsx - Update handleSubmit
-
   const handleSubmit = async () => {
-    // Check if token exists before submitting
-    const token = localStorage.getItem('token');
-    console.log('Token before submit:', token ? 'Present' : 'Missing');
+    // ✅ FIX: Use 'accessToken' instead of 'token'
+    const token = localStorage.getItem('accessToken');
+    console.log('🔑 Token before submit:', token ? 'Present' : 'Missing');
 
     if (!token) {
       toast.error('Please login again');
@@ -40,28 +40,32 @@ export default function AdminProducts() {
 
     try {
       if (editingProduct) {
-        console.log('Updating product:', editingProduct.id, formData);
+        console.log('📦 Updating product:', editingProduct.id, formData);
         await updateProduct(editingProduct.id, formData);
         toast.success('Product updated successfully');
+
+        await fetchAllProducts();
+
       } else {
         await createProduct(formData);
         toast.success('Product created successfully');
+
+        await fetchAllProducts();
       }
       setIsDialogOpen(false);
       resetForm();
     } catch (error: any) {
-      console.error('Submit error:', error);
-      toast.error(error.message || 'Failed to save product');
+      console.error('❌ Submit error:', error);
 
-      // If unauthorized, redirect to login
-      if (error.message.includes('401') || error.message.includes('unauthorized')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        toast.error('Session expired. Please login again.');
+        authService.logout();
         window.location.href = '/login';
+      } else {
+        toast.error(error.message || 'Failed to save product');
       }
     }
   };
-
   const handleEdit = (product: any) => {
     setEditingProduct(product);
     setFormData({
