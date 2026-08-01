@@ -23,20 +23,55 @@ interface CartStore {
   syncWithBackend: () => Promise<void>;
   getTotalItems: () => number;
   getTotalAmount: () => number;
+  fetchCart: () => Promise<void>;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
+
+      fetchCart: async () => {
+        try {
+          set({ isLoading: true });
+          const response: any = await cartService.getCart();
+
+          let freshItems: any[] = [];
+          if (Array.isArray(response)) {
+            freshItems = response;
+          } else if (response && response.items) {
+            freshItems = response.items;
+          }
+
+          const syncedItems = freshItems.map((item: any) => ({
+            id: item.id,
+            productId: item.productId,
+            productName: item.productName,
+            productPrice: item.productPrice,
+            quantity: item.quantity,
+            imageUrl: item.imageUrl || '',
+            subtotal: item.productPrice * item.quantity
+          }));
+
+          set({ items: syncedItems, isLoading: false });
+        } catch (error) {
+          console.error('Failed to fetch cart:', error);
+          set({ isLoading: false });
+        }
+      },
+
       items: [],
       isLoading: false,
 
-      addItemLocally: (product, quantity) => {
+      addItemLocally: async (product, quantity) => {
+        console.log('➕ addItemLocally called for:', product.name, 'quantity:', quantity);
+
         const currentItems = get().items;
+        // Check if product already exists using productId
         const existingIndex = currentItems.findIndex(item => item.productId === product.id);
 
         let newItems;
         if (existingIndex !== -1) {
+          // Update existing item - merge quantities
           newItems = [...currentItems];
           const newQuantity = newItems[existingIndex].quantity + quantity;
           newItems[existingIndex] = {
@@ -45,6 +80,7 @@ export const useCartStore = create<CartStore>()(
             subtotal: newItems[existingIndex].productPrice * newQuantity
           };
         } else {
+          // Add new item
           const newItem: CartItem = {
             id: Date.now(),
             productId: product.id,
@@ -58,6 +94,17 @@ export const useCartStore = create<CartStore>()(
         }
 
         set({ items: newItems });
+
+        // ✅ AUTOMATICALLY SYNC TO BACKEND AFTER ADDING
+        try {
+          const user = authService.getCurrentUser();
+          if (user) {
+            await cartService.addToCart({ productId: product.id, quantity: quantity });
+            console.log('🛒 Automatically synced to backend!');
+          }
+        } catch (error) {
+          console.error('Failed to sync to backend:', error);
+        }
       },
 
       updateQuantityLocally: (productId, quantity) => {
@@ -85,7 +132,6 @@ export const useCartStore = create<CartStore>()(
         set({ items: [] });
       },
 
-      // ✅ SIMPLIFIED SYNC: Just fetch from backend and overwrite local
       syncWithBackend: async () => {
         const user = authService.getCurrentUser();
         if (!user) return;

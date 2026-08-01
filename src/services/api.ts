@@ -11,11 +11,17 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// Response interceptor
+// ✅ Request interceptor - ADD THIS BACK
 api.interceptors.request.use(
   (config) => {
-    // We do NOT need to add Authorization header manually.
-    // The browser sends the HttpOnly cookie automatically.
+    // Check for token in localStorage (or cookie)
+    const token = localStorage.getItem('accessToken');
+
+    // If we have a token, add it to the Authorization header
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
   (error) => {

@@ -1,10 +1,10 @@
 import api from './api';
-import { 
-  LoginRequest, 
-  RegisterRequest, 
-  AuthResponse, 
-  TwoFactorResponse, 
-  User 
+import {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  TwoFactorResponse,
+  User
 } from '../types';
 
 // Token storage keys
@@ -17,25 +17,23 @@ export const authService = {
   login: async (credentials: LoginRequest): Promise<AuthResponse | TwoFactorResponse> => {
     try {
       const response: any = await api.post('/auth/login', credentials);
-      
+
       // Handle 2FA
       if (response.requiresTwoFactor) {
         return response as TwoFactorResponse;
       }
-      
-      // ✅ JSON body might be empty. The token is in the cookie.
-      // But we still need the user info.
-      if (response.email && response.fullName && response.role) {
+
+      // ✅ Save tokens AND user info to localStorage
+      if (response.accessToken) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
+        localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
         localStorage.setItem(USER_KEY, JSON.stringify({
           email: response.email,
           fullName: response.fullName,
           role: response.role
         }));
       }
-      
-      // ✅ Force the auth state to update
-      window.dispatchEvent(new Event('auth-change'));
-      
+
       return response as AuthResponse;
     } catch (error: any) {
       throw error;
@@ -54,7 +52,7 @@ export const authService = {
 
     try {
       const response: any = await api.post('/auth/refresh-token', { refreshToken });
-      
+
       if (response.accessToken) {
         localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
         localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
@@ -67,10 +65,10 @@ export const authService = {
     }
   },
 
-    // ✅ NEW: Verify 2FA code
+  // ✅ NEW: Verify 2FA code
   verifyTwoFactor: async (data: { email: string; code: string }): Promise<AuthResponse> => {
     const response: any = await api.post('/auth/2fa/verify', data);
-    
+
     if (response.accessToken) {
       localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
       localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
@@ -100,7 +98,6 @@ export const authService = {
     }
   },
 
-  // Logout
   logout: async (): Promise<void> => {
     try {
       await authService.revokeToken();
@@ -136,8 +133,8 @@ export const authService = {
   },
 
   isAuthenticated: (): boolean => {
-    // If we have user data, assume we are logged in
-    return !!localStorage.getItem(USER_KEY);
+    // Check for accessToken in localStorage
+    return !!localStorage.getItem(ACCESS_TOKEN_KEY);
   },
   // Check if admin
   isAdmin: (): boolean => {

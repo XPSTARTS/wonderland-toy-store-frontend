@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useCartStore } from '../stores/cartStore';
 import { useOrderStore } from '../stores/useOrderStore';
-import { cartService } from '../services/cart.service';
 import { authService } from '../services/authService';
 import { Loader2, CreditCard, Wallet, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -37,9 +36,9 @@ const Checkout = () => {
     cardHolderName: ''
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
 
-  const { items, getTotalAmount, syncWithBackend, isLoading: cartLoading, clearCartLocally } = useCartStore();
+  // We ONLY use items for UI rendering, NOT for validation
+  const { items, getTotalAmount, isLoading: cartLoading, clearCartLocally } = useCartStore();
   const { placeOrder, isLoading: orderLoading } = useOrderStore();
 
   const user = authService.getCurrentUser();
@@ -73,15 +72,14 @@ const Checkout = () => {
     setCardDetails({ ...cardDetails, [field]: formattedValue });
   };
 
-  // Redirect if cart is empty
+  // Redirect if cart is empty (only for UI, we won't block the order)
   useEffect(() => {
-    if (!cartLoading && items.length === 0 && !isSyncing) {
-      toast.error('Your cart is empty');
-      navigate('/cart');
+    if (!cartLoading && items.length === 0) {
+      // We don't redirect here anymore. We let the user try to order.
     }
-  }, [items.length, cartLoading, navigate, isSyncing]);
+  }, [items.length, cartLoading, navigate]);
 
-    const processPayment = async (orderId: number) => {
+  const processPayment = async (orderId: number) => {
     try {
       setIsProcessingPayment(true);
 
@@ -91,7 +89,6 @@ const Checkout = () => {
         ...(paymentMethod === 'card' && { cardDetails: cardDetails })
       };
 
-      // ✅ REMOVED: Authorization header. The browser sends the cookie automatically.
       const response = await fetch(`${import.meta.env.VITE_API_URL}/payment/process/${orderId}`, {
         method: 'POST',
         headers: {
@@ -117,69 +114,40 @@ const Checkout = () => {
       setIsProcessingPayment(false);
     }
   };
-  
-    const onSubmit = async (data: CheckoutFormData) => {
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
-      navigate('/cart');
-      return;
-    }
 
-    // Validate card details if card payment selected
-    if (paymentMethod === 'card') {
-      if (!cardDetails.cardNumber || cardDetails.cardNumber.replace(/\s/g, '').length < 16) {
-        toast.error('Please enter a valid card number');
-        return;
-      }
-      if (!cardDetails.expiryDate || cardDetails.expiryDate.length < 5) {
-        toast.error('Please enter a valid expiry date');
-        return;
-      }
-      if (!cardDetails.cvv || cardDetails.cvv.length < 3) {
-        toast.error('Please enter a valid CVV');
-        return;
-      }
-      if (!cardDetails.cardHolderName) {
-        toast.error('Please enter cardholder name');
-        return;
-      }
-    }
-
+  const onSubmit = async (data: CheckoutFormData) => {
     const loadingToastId = 'order-processing';
+    toast.loading('Placing your order...', { id: loadingToastId });
 
     try {
-      // ✅ REMOVED: Manual cart clearing and syncing
-      // Backend handles cart clearance automatically upon successful order
-
-      // Build complete shipping address
+      // ✅ STEP 1: Build shipping address and place order directly
       const shippingAddress = `${data.address}, ${data.city}, ${data.postalCode}`;
 
-      // Place the order
-      toast.loading('Placing your order...', { id: loadingToastId });
+      // Place the order (backend will validate if cart is empty)
       const order = await placeOrder(shippingAddress);
+      console.log('📦 Order response:', order);
 
-      // ✅ For COD: Order complete, no payment needed
+      // ✅ STEP 2: ONLY clear the cart AFTER the order is confirmed
+      clearCartLocally();
+
+      // For COD: Order complete, no payment needed
       if (paymentMethod === 'cod') {
         toast.success('Order placed successfully!', { id: loadingToastId });
-        // Let the backend clear the cart, but we clear local state for UI
-        clearCartLocally();
         setTimeout(() => navigate(`/order-confirmation/${order.id}`), 500);
         return;
       }
 
-      // ✅ For Card/Bank: Process payment after order
+      // For Card/Bank: Process payment after order
       toast.loading('Processing payment...', { id: loadingToastId });
       const paymentSuccess = await processPayment(order.id);
 
       if (!paymentSuccess) {
         toast.error('Order placed but payment failed. Please contact support.', { id: loadingToastId });
-        clearCartLocally();
         setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state: { paymentFailed: true } }), 500);
         return;
       }
 
       toast.success('Payment successful! Order placed!', { id: loadingToastId });
-      clearCartLocally();
       setTimeout(() => navigate(`/order-confirmation/${order.id}`), 500);
 
     } catch (error: any) {
@@ -188,11 +156,11 @@ const Checkout = () => {
     }
   };
 
-  if (cartLoading || isSyncing) {
+  if (cartLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-gray-600">Preparing your cart...</p>
+        <p className="text-gray-600">Loading cart...</p>
       </div>
     );
   }
